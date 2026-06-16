@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -69,8 +69,7 @@ function getCategoryStats(activities: Activity[]) {
 
 function ChecklistPage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const token = searchParams.get("token") || "";
+  const token = searchParams.get("sasi-token") || searchParams.get("token") || "";
 
   const [activities, setActivities] = useState<Activity[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -89,7 +88,7 @@ function ChecklistPage() {
       return;
     }
     try {
-      const res = await fetch(`/api/activities?token=${encodeURIComponent(token)}`);
+      const res = await fetch(`/api/activities?sasi-token=${encodeURIComponent(token)}`);
       if (!res.ok) {
         setAuthError(true);
         setLoading(false);
@@ -112,7 +111,7 @@ function ChecklistPage() {
   async function updateActivity(id: string, patch: Partial<Activity>) {
     setSaving(id);
     try {
-      await fetch(`/api/activities?token=${encodeURIComponent(token)}`, {
+      await fetch(`/api/activities?sasi-token=${encodeURIComponent(token)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, ...patch }),
@@ -177,7 +176,7 @@ function ChecklistPage() {
           </p>
           {!token && (
             <p style={{ color: "#4A5270", fontSize: 12, marginTop: 12, fontFamily: "monospace" }}>
-              URL esperada: /?token=SEU_TOKEN
+              URL esperada: /?sasi-token=SEU_TOKEN
             </p>
           )}
         </div>
@@ -206,7 +205,7 @@ function ChecklistPage() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <Link
-              href={`/history?token=${encodeURIComponent(token)}`}
+              href={`/history?sasi-token=${encodeURIComponent(token)}`}
               style={{
                 color: "#7A82A0", fontSize: 13, textDecoration: "none",
                 display: "flex", alignItems: "center", gap: 6,

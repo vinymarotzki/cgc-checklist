@@ -49,7 +49,7 @@ function formatDate(iso: string) {
 
 function HistoryPage() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("token") || "";
+  const token = searchParams.get("sasi-token") || searchParams.get("token") || "";
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -60,7 +60,7 @@ function HistoryPage() {
   const fetchHistory = useCallback(async () => {
     if (!token) { setAuthError(true); setLoading(false); return; }
     try {
-      const res = await fetch(`/api/history?token=${encodeURIComponent(token)}`);
+      const res = await fetch(`/api/history?sasi-token=${encodeURIComponent(token)}`);
       if (!res.ok) { setAuthError(true); setLoading(false); return; }
       const data = await res.json();
       setHistory(data.history);
@@ -125,7 +125,7 @@ function HistoryPage() {
         <div style={{ maxWidth: 1000, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <Link
-              href={`/?token=${encodeURIComponent(token)}`}
+              href={`/?sasi-token=${encodeURIComponent(token)}`}
               style={{
                 color: "#7A82A0", textDecoration: "none", fontSize: 13,
                 display: "flex", alignItems: "center", gap: 6,

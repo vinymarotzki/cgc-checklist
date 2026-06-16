@@ -59,7 +59,7 @@ npm run db:seed
 npm run dev
 ```
 
-Acesse: `http://localhost:3000/?token=SEU_TOKEN_SASI`
+Acesse: `http://localhost:3000/?sasi-token=SEU_TOKEN_SASI`
 
 ---
 
@@ -101,8 +101,8 @@ npm run db:seed
 ### URL de acesso
 
 ```
-https://seu-app.vercel.app/?token=TOKEN_DO_USUARIO_SASI
-https://seu-app.vercel.app/history?token=TOKEN_DO_USUARIO_SASI
+https://seu-app.vercel.app/?sasi-token=TOKEN_DO_USUARIO_SASI
+https://seu-app.vercel.app/history?sasi-token=TOKEN_DO_USUARIO_SASI
 ```
 
 O token é validado em `https://api.sasi.io/api/v2/providers/external/me` a cada acesso.

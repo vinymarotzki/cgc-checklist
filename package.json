@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "db:seed": "npx tsx src/lib/seed.ts"
   },
   "dependencies": {
@@ -23,6 +23,8 @@
     "@types/react-dom": "^19",
     "@types/uuid": "^10",
     "autoprefixer": "^10",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.9",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.19.2",

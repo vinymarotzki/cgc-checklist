@@ -4,7 +4,7 @@ import { authenticateToken } from "@/lib/sasi";
 import { v4 as uuidv4 } from "uuid";
 
 export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get("token");
+  const token = req.nextUrl.searchParams.get("sasi-token") || req.nextUrl.searchParams.get("token");
   if (!token) {
     return NextResponse.json({ error: "Token obrigatório" }, { status: 401 });
   }
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get("token");
+  const token = req.nextUrl.searchParams.get("sasi-token") || req.nextUrl.searchParams.get("token");
   if (!token) {
     return NextResponse.json({ error: "Token obrigatório" }, { status: 401 });
   }

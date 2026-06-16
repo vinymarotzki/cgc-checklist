@@ -3,7 +3,7 @@ import { getDb, initDb } from "@/lib/db";
 import { authenticateToken } from "@/lib/sasi";
 
 export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get("token");
+  const token = req.nextUrl.searchParams.get("sasi-token") || req.nextUrl.searchParams.get("token");
   if (!token) {
     return NextResponse.json({ error: "Token obrigatório" }, { status: 401 });
   }
