@@ -1,5 +1,8 @@
+import { loadEnvConfig } from "@next/env";
 import { getDb, initDb } from "./db";
 import { v4 as uuidv4 } from "uuid";
+
+loadEnvConfig(process.cwd());
 
 const ACTIVITIES = [
   // 1. Planejamento e Articulação Institucional
@@ -249,4 +252,7 @@ async function seed() {
   console.log(`Seeded ${ACTIVITIES.length} activities.`);
 }
 
-seed().catch(console.error);
+seed().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
