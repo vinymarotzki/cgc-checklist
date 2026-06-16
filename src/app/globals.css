@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0F1117;
+  --surface: #181C27;
+  --card: #1E2333;
+  --border: #2A3045;
+  --accent: #3B6EF5;
+  --accent-dim: #2A4FA8;
+  --muted: #4A5270;
+  --text: #E8EAF0;
+  --text-muted: #7A82A0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Status badge classes */
+.status-SEM_STATUS {
+  background: #1E2333;
+  color: #7A82A0;
+  border-color: #2A3045;
+}
+.status-NAO_INICIADO {
+  background: #1E1A2A;
+  color: #A78BFA;
+  border-color: #7C3AED;
+}
+.status-EM_ANDAMENTO {
+  background: #1A2E4A;
+  color: #60A5FA;
+  border-color: #2563EB;
+}
+.status-CONCLUIDO {
+  background: #0F2A1E;
+  color: #34D399;
+  border-color: #059669;
+}
+.status-IMPEDIDO {
+  background: #2A1A1A;
+  color: #F87171;
+  border-color: #DC2626;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Custom select styling */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237A82A0' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
+}
+
+select option {
+  background: #1E2333;
+  color: #E8EAF0;
+}
