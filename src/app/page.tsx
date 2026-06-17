@@ -20,22 +20,18 @@ interface User {
 }
 
 const STATUS_OPTIONS = [
-  { value: "SEM_STATUS", label: "Sem Status", color: "#7A82A0" },
-  { value: "NAO_INICIADO", label: "Não Iniciado", color: "#A78BFA" },
-  { value: "EM_ANDAMENTO", label: "Em Andamento", color: "#60A5FA" },
-  { value: "CONCLUIDO", label: "Concluído", color: "#34D399" },
-  { value: "IMPEDIDO", label: "Impedido", color: "#F87171" },
+  { value: "NAO_INICIADO", label: "Não Iniciado", color: "#b10202" },
+  { value: "EM_ANDAMENTO", label: "Em Andamento", color: "#ffe5a0" },
+  { value: "CONCLUIDO", label: "Concluído", color: "#11734b" },
 ];
 
 function getStatusStyle(status: string) {
   const map: Record<string, { bg: string; text: string; border: string }> = {
-    SEM_STATUS: { bg: "#1E2333", text: "#7A82A0", border: "#2A3045" },
-    NAO_INICIADO: { bg: "#1E1A2A", text: "#A78BFA", border: "#7C3AED" },
-    EM_ANDAMENTO: { bg: "#1A2E4A", text: "#60A5FA", border: "#2563EB" },
-    CONCLUIDO: { bg: "#0F2A1E", text: "#34D399", border: "#059669" },
-    IMPEDIDO: { bg: "#2A1A1A", text: "#F87171", border: "#DC2626" },
+    NAO_INICIADO: { bg: "#b10202", text: "#F8FAFC", border: "#7a0202" },
+    EM_ANDAMENTO: { bg: "#ffe5a0", text: "#1F1F1F", border: "#d6c27b" },
+    CONCLUIDO: { bg: "#11734b", text: "#F8FAFC", border: "#0e5b3f" },
   };
-  return map[status] ?? map["SEM_STATUS"];
+  return map[status] ?? map["NAO_INICIADO"];
 }
 
 function getCategoryColor(category: string) {
@@ -76,6 +72,9 @@ function ChecklistPage() {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
+  const [completing, setCompleting] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState<string | null>(null);
+  const [completionError, setCompletionError] = useState<string | null>(null);
   const [editingObs, setEditingObs] = useState<string | null>(null);
   const [obsValue, setObsValue] = useState("");
   const [filter, setFilter] = useState("TODOS");
@@ -139,6 +138,29 @@ function ChecklistPage() {
   const completionPct = totalStats.total > 0
     ? Math.round((totalStats.done / totalStats.total) * 100)
     : 0;
+
+  const finalizeChecklist = async () => {
+    if (completionPct < 100) return;
+
+    setCompleting(true);
+    setCompletionError(null);
+    setCompletionMessage(null);
+
+    try {
+      const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
+      const res = await fetch(`/api/checklists${query}`, { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || "Falha ao finalizar checklist");
+      }
+      setCompletionMessage("Checklist finalizado e reiniciado com sucesso.");
+      await fetchActivities();
+    } catch (error) {
+      setCompletionError(error instanceof Error ? error.message : "Erro inesperado ao finalizar checklist.");
+    } finally {
+      setCompleting(false);
+    }
+  };
 
   const filteredActivities = activities.filter((a) => {
     const matchFilter = filter === "TODOS" || a.status === filter;
@@ -238,7 +260,7 @@ function ChecklistPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
             <div>
               <h1 style={{ color: "#E8EAF0", fontSize: 22, fontWeight: 700, margin: 0 }}>
-                Simulado de Evacuação
+                Checklist de Abandono de Área
               </h1>
               <p style={{ color: "#7A82A0", fontSize: 13, marginTop: 4 }}>
                 {totalStats.total} atividades · {totalStats.done} concluídas
@@ -274,6 +296,34 @@ function ChecklistPage() {
               }} />
             </div>
           </div>
+
+          {completionPct === 100 && (
+            <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <button
+                onClick={finalizeChecklist}
+                disabled={completing}
+                style={{
+                  background: "#10B981",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "10px 18px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: completing ? "not-allowed" : "pointer",
+                  opacity: completing ? 0.7 : 1,
+                }}
+              >
+                {completing ? "Finalizando..." : "Finalizar checklist"}
+              </button>
+              {completionMessage && (
+                <span style={{ color: "#34D399", fontSize: 13 }}>{completionMessage}</span>
+              )}
+              {completionError && (
+                <span style={{ color: "#F87171", fontSize: 13 }}>{completionError}</span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Filters */}
@@ -293,7 +343,7 @@ function ChecklistPage() {
             <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#4A5270", fontSize: 14 }}>🔍</span>
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {["TODOS", "SEM_STATUS", "NAO_INICIADO", "EM_ANDAMENTO", "CONCLUIDO", "IMPEDIDO"].map((f) => {
+            {["TODOS", "NAO_INICIADO", "EM_ANDAMENTO", "CONCLUIDO"].map((f) => {
               const opt = STATUS_OPTIONS.find((s) => s.value === f);
               const isActive = filter === f;
               return (

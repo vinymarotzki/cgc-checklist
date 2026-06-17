@@ -33,10 +33,10 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_COLOR: Record<string, string> = {
   SEM_STATUS: "#7A82A0",
-  NAO_INICIADO: "#A78BFA",
-  EM_ANDAMENTO: "#60A5FA",
-  CONCLUIDO: "#34D399",
-  IMPEDIDO: "#F87171",
+  NAO_INICIADO: "#b10202",
+  EM_ANDAMENTO: "#ffe5a0",
+  CONCLUIDO: "#11734b",
+  IMPEDIDO: "#b10202",
 };
 
 function formatDate(iso: string) {

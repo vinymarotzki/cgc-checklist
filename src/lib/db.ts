@@ -45,4 +45,15 @@ export async function initDb() {
       created_at TEXT NOT NULL
     )
   `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS completed_checklists (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      user_name TEXT,
+      total_items INTEGER,
+      completed_items INTEGER,
+      completed_at TEXT NOT NULL
+    )
+  `);
 }
