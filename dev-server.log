@@ -1,0 +1,144 @@
+   ▲ Next.js 15.5.19
+   - Local:        http://127.0.0.1:3000
+   - Network:      http://127.0.0.1:3000
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · serverActions
+
+ ✓ Starting...
+ ✓ Ready in 3.5s
+ ○ Compiling / ...
+ ✓ Compiled / in 3.1s (603 modules)
+ GET / 200 in 3966ms
+ ✓ Compiled in 992ms (239 modules)
+ GET / 200 in 240ms
+ GET / 200 in 14ms
+ GET / 200 in 68ms
+ GET / 200 in 104ms
+ GET / 200 in 121ms
+ GET / 200 in 76ms
+ GET / 200 in 391ms
+ ✓ Compiled in 2.1s (603 modules)
+ GET / 200 in 382ms
+ ✓ Compiled in 820ms (603 modules)
+ GET / 200 in 343ms
+ ✓ Compiled /api/activities in 567ms (603 modules)
+ ✓ Compiled in 948ms (635 modules)
+ GET / 200 in 3232ms
+ ✓ Compiled in 634ms (649 modules)
+ GET / 200 in 185ms
+ GET /api/activities 200 in 5037ms
+ ✓ Compiled in 622ms (649 modules)
+ GET / 200 in 132ms
+ GET /api/activities 200 in 1295ms
+ ✓ Compiled in 532ms (649 modules)
+ GET / 200 in 105ms
+ GET / 200 in 316ms
+ GET /api/activities 200 in 1441ms
+ GET / 200 in 88ms
+ GET /api/activities 200 in 1391ms
+ GET / 200 in 84ms
+ GET /api/activities 200 in 1343ms
+ ✓ Compiled in 1006ms (649 modules)
+ GET / 200 in 323ms
+ GET /api/activities 200 in 1636ms
+ ✓ Compiled in 763ms (649 modules)
+ GET / 200 in 213ms
+ ✓ Compiled in 533ms (649 modules)
+ GET / 200 in 150ms
+ ✓ Compiled in 495ms (649 modules)
+ GET / 200 in 130ms
+ GET /api/activities 200 in 1225ms
+ ○ Compiling /history ...
+ ✓ Compiled /history in 639ms (642 modules)
+ GET /history?sasi-token= 200 in 756ms
+ ○ Compiling /api/history ...
+ ✓ Compiled /api/history in 579ms (644 modules)
+ GET /api/history 200 in 2041ms
+ GET /api/history 200 in 530ms
+ GET /api/history 200 in 526ms
+ GET / 200 in 52ms
+ GET /api/activities 200 in 550ms
+ GET /api/activities 200 in 530ms
+ GET /api/activities 200 in 525ms
+ GET / 200 in 291ms
+ GET /api/activities 200 in 1362ms
+ GET /api/activities 200 in 506ms
+ ✓ Compiled in 922ms (611 modules)
+ GET / 200 in 420ms
+ ✓ Compiled in 453ms (242 modules)
+ GET / 200 in 144ms
+ GET / 200 in 280ms
+ ✓ Compiled /api/activities in 372ms (414 modules)
+ GET / 200 in 338ms
+ GET /api/activities 200 in 2202ms
+ GET /api/activities 200 in 509ms
+ PATCH /api/activities 200 in 1945ms
+ ✓ Compiled in 1510ms (611 modules)
+ GET / 200 in 592ms
+ ✓ Compiled /api/activities in 496ms (414 modules)
+ ✓ Compiled in 965ms (656 modules)
+ GET / 200 in 217ms
+ GET /api/activities 200 in 2741ms
+ ✓ Compiled in 1587ms (656 modules)
+ GET / 200 in 131ms
+ ✓ Compiled in 1055ms (656 modules)
+ GET / 200 in 142ms
+ PATCH /api/activities 200 in 2043ms
+ ✓ Compiled in 2.3s (611 modules)
+ GET / 200 in 416ms
+ GET / 200 in 326ms
+ GET / 200 in 149ms
+ GET / 200 in 131ms
+ GET / 200 in 871ms
+ GET / 200 in 172ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 7.5s (958 modules)
+ GET / 500 in 12838ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1199ms (949 modules)
+ GET / 500 in 1525ms
+ GET / 500 in 352ms
+ GET / 500 in 298ms
+ GET / 500 in 287ms
+ GET / 404 in 33ms
+ GET / 404 in 44ms
+ GET / 404 in 25ms
+ GET / 404 in 22ms
+ GET / 404 in 29ms
+ GET / 404 in 25ms
+ GET / 404 in 31ms
+ GET / 404 in 20ms
+ GET / 404 in 36ms
+ GET / 404 in 22ms
+ GET / 404 in 23ms
+ GET / 404 in 25ms
+ GET / 404 in 27ms
+ GET / 404 in 16ms
+ GET / 404 in 31ms
+ GET / 404 in 18ms
+ GET / 404 in 106ms
+ GET / 404 in 24ms
+ GET / 404 in 18ms
+ GET / 404 in 13ms
+ GET / 404 in 20ms
+ GET / 404 in 34ms
+ GET / 404 in 26ms
+ GET / 500 in 1540ms
+ GET / 500 in 1080ms
+ GET / 500 in 1191ms
+ GET / 500 in 884ms
+ GET / 500 in 1571ms
+ GET / 500 in 823ms
+ GET / 500 in 919ms
+ GET / 500 in 852ms
+ GET / 500 in 903ms
+ GET / 200 in 350ms
+ ✓ Compiled in 11.4s (958 modules)
+ ✓ Compiled in 1332ms (958 modules)
+ ✓ Compiled in 902ms (958 modules)
+ ✓ Compiled in 1116ms (958 modules)
+ ✓ Compiled in 4.8s (958 modules)
+ ✓ Compiled in 2.5s (958 modules)
+ ✓ Compiled in 2.5s (958 modules)
+[?25h

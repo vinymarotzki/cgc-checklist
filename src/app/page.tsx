@@ -80,15 +80,20 @@ function ChecklistPage() {
   const [obsValue, setObsValue] = useState("");
   const [filter, setFilter] = useState("TODOS");
   const [searchTerm, setSearchTerm] = useState("");
+  const isLocalDev =
+    typeof window !== "undefined" &&
+    window.location.protocol === "http:" &&
+    /^(localhost|127\.0\.0\.1|::1)$/.test(window.location.hostname);
 
   const fetchActivities = useCallback(async () => {
-    if (!token) {
+    if (!token && !isLocalDev) {
       setAuthError(true);
       setLoading(false);
       return;
     }
     try {
-      const res = await fetch(`/api/activities?sasi-token=${encodeURIComponent(token)}`);
+      const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
+      const res = await fetch(`/api/activities${query}`);
       if (!res.ok) {
         setAuthError(true);
         setLoading(false);
@@ -102,7 +107,7 @@ function ChecklistPage() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, isLocalDev]);
 
   useEffect(() => {
     fetchActivities();
@@ -111,7 +116,8 @@ function ChecklistPage() {
   async function updateActivity(id: string, patch: Partial<Activity>) {
     setSaving(id);
     try {
-      await fetch(`/api/activities?sasi-token=${encodeURIComponent(token)}`, {
+      const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
+      await fetch(`/api/activities${query}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, ...patch }),
@@ -192,20 +198,10 @@ function ChecklistPage() {
         padding: "0 24px", position: "sticky", top: 0, zIndex: 100
       }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{
-              width: 32, height: 32, background: "#3B6EF5",
-              borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16
-            }}>🛡</div>
-            <div>
-              <span style={{ color: "#E8EAF0", fontWeight: 600, fontSize: 15 }}>SASI</span>
-              <span style={{ color: "#4A5270", fontSize: 13, marginLeft: 8 }}>Checklist de Simulados</span>
-            </div>
-          </div>
+          <div />
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <Link
-              href={`/history?sasi-token=${encodeURIComponent(token)}`}
+              href={isLocalDev ? "/history" : `/history?sasi-token=${encodeURIComponent(token)}`}
               style={{
                 color: "#7A82A0", fontSize: 13, textDecoration: "none",
                 display: "flex", alignItems: "center", gap: 6,

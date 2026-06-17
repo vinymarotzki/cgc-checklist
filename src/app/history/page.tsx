@@ -56,11 +56,16 @@ function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const isLocalDev =
+    typeof window !== "undefined" &&
+    window.location.protocol === "http:" &&
+    /^(localhost|127\.0\.0\.1|::1)$/.test(window.location.hostname);
 
   const fetchHistory = useCallback(async () => {
-    if (!token) { setAuthError(true); setLoading(false); return; }
+    if (!token && !isLocalDev) { setAuthError(true); setLoading(false); return; }
     try {
-      const res = await fetch(`/api/history?sasi-token=${encodeURIComponent(token)}`);
+      const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
+      const res = await fetch(`/api/history${query}`);
       if (!res.ok) { setAuthError(true); setLoading(false); return; }
       const data = await res.json();
       setHistory(data.history);
@@ -70,9 +75,11 @@ function HistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, isLocalDev]);
 
-  useEffect(() => { fetchHistory(); }, [fetchHistory]);
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
 
   const filtered = history.filter((h) => {
     if (!searchTerm) return true;
@@ -125,7 +132,7 @@ function HistoryPage() {
         <div style={{ maxWidth: 1000, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <Link
-              href={`/?sasi-token=${encodeURIComponent(token)}`}
+              href={isLocalDev ? "/" : `/?sasi-token=${encodeURIComponent(token)}`}
               style={{
                 color: "#7A82A0", textDecoration: "none", fontSize: 13,
                 display: "flex", alignItems: "center", gap: 6,
