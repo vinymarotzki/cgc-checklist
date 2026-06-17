@@ -55,6 +55,10 @@ export async function POST(req: NextRequest) {
     SET status = 'SEM_STATUS', responsible = NULL, observation = NULL
   `);
 
+  await db.execute(`
+    DELETE FROM history
+  `);
+
   return NextResponse.json({ success: true, completedAt });
 }
 

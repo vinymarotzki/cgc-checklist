@@ -31,5 +31,12 @@ export async function GET(req: NextRequest) {
     LIMIT 200
   `);
 
-  return NextResponse.json({ history: result.rows, user });
+  const completedResult = await db.execute(`
+    SELECT *
+    FROM completed_checklists
+    ORDER BY completed_at DESC
+    LIMIT 100
+  `);
+
+  return NextResponse.json({ history: result.rows, completed: completedResult.rows, user });
 }

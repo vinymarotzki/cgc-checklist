@@ -30,8 +30,20 @@ function getStatusStyle(status: string) {
     NAO_INICIADO: { bg: "#b10202", text: "#F8FAFC", border: "#7a0202" },
     EM_ANDAMENTO: { bg: "#ffe5a0", text: "#1F1F1F", border: "#d6c27b" },
     CONCLUIDO: { bg: "#11734b", text: "#F8FAFC", border: "#0e5b3f" },
+    IMPEDIDO: { bg: "#b10202", text: "#F8FAFC", border: "#7a0202" },
   };
   return map[status] ?? map["NAO_INICIADO"];
+}
+
+function getStatusColor(status: string) {
+  const map: Record<string, string> = {
+    NAO_INICIADO: "#b10202",
+    EM_ANDAMENTO: "#ffe5a0",
+    CONCLUIDO: "#11734b",
+    IMPEDIDO: "#b10202",
+    SEM_STATUS: "#e8eaed",
+  };
+  return map[status] ?? "#7A82A0";
 }
 
 function getCategoryColor(category: string) {
@@ -135,9 +147,13 @@ function ChecklistPage() {
   }
 
   const totalStats = getCategoryStats(activities);
+  const notStartedCount = totalStats.total - totalStats.done - totalStats.inProgress - totalStats.blocked;
   const completionPct = totalStats.total > 0
     ? Math.round((totalStats.done / totalStats.total) * 100)
     : 0;
+  const notStartedPct = totalStats.total > 0 ? (notStartedCount / totalStats.total) * 100 : 0;
+  const inProgressPct = totalStats.total > 0 ? (totalStats.inProgress / totalStats.total) * 100 : 0;
+  const donePct = totalStats.total > 0 ? (totalStats.done / totalStats.total) * 100 : 0;
 
   const finalizeChecklist = async () => {
     if (completionPct < 100) return;
@@ -288,11 +304,23 @@ function ChecklistPage() {
               <span style={{ color: "#7A82A0", fontSize: 12 }}>Progresso geral</span>
               <span style={{ color: "#E8EAF0", fontSize: 12, fontWeight: 600 }}>{completionPct}%</span>
             </div>
-            <div style={{ background: "#1E2333", borderRadius: 4, height: 6, overflow: "hidden" }}>
+            <div style={{ background: "#1E2333", borderRadius: 4, height: 6, overflow: "hidden", display: "flex" }}>
               <div style={{
-                height: "100%", width: `${completionPct}%`,
-                background: "linear-gradient(90deg, #3B6EF5, #34D399)",
-                borderRadius: 4, transition: "width 0.5s ease"
+                height: "100%", width: `${notStartedPct}%`,
+                background: getStatusColor("NAO_INICIADO"),
+                borderRadius: "4px 0 0 4px",
+                transition: "width 0.5s ease"
+              }} />
+              <div style={{
+                height: "100%", width: `${inProgressPct}%`,
+                background: getStatusColor("EM_ANDAMENTO"),
+                transition: "width 0.5s ease"
+              }} />
+              <div style={{
+                height: "100%", width: `${donePct}%`,
+                background: getStatusColor("CONCLUIDO"),
+                borderRadius: "0 4px 4px 0",
+                transition: "width 0.5s ease"
               }} />
             </div>
           </div>

@@ -18,6 +18,15 @@ interface HistoryEntry {
   created_at: string;
 }
 
+interface CompletedChecklistEntry {
+  id: string;
+  user_id: string;
+  user_name: string;
+  total_items: number;
+  completed_items: number;
+  completed_at: string;
+}
+
 interface User {
   id: string;
   name: string;
@@ -47,11 +56,64 @@ function formatDate(iso: string) {
   });
 }
 
+function escapeCsv(value: string | number | null | undefined) {
+  if (value === undefined || value === null) return "";
+  const text = String(value);
+  if (text.includes("\"") || text.includes(",") || text.includes("\n")) {
+    return `"${text.replace(/\"/g, '""')}"`;
+  }
+  return text;
+}
+
+function exportHistoryCsv(history: HistoryEntry[], completedChecklists: CompletedChecklistEntry[]) {
+  const rows: string[][] = [
+    ["Tipo", "ID", "Atividade", "Categoria", "Status Antigo", "Status Novo", "Usuário", "Observação", "Data/Hora"]
+  ];
+
+  history.forEach((entry) => {
+    rows.push([
+      "Alteração",
+      entry.id,
+      entry.activity || "",
+      entry.category || "",
+      entry.old_status,
+      entry.new_status,
+      entry.user_name,
+      entry.observation || "",
+      entry.created_at,
+    ]);
+  });
+
+  if (completedChecklists.length > 0) {
+    rows.push([""], ["Finalização de checklist", "ID", "Usuário", "Total de Itens", "Itens Concluídos", "Data/Hora"]);
+    completedChecklists.forEach((entry) => {
+      rows.push([
+        "Finalização",
+        entry.id,
+        entry.user_name,
+        String(entry.total_items),
+        String(entry.completed_items),
+        entry.completed_at,
+      ]);
+    });
+  }
+
+  const csv = rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `historico-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function HistoryPage() {
   const searchParams = useSearchParams();
   const token = searchParams.get("sasi-token") || searchParams.get("token") || "";
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [completedChecklists, setCompletedChecklists] = useState<CompletedChecklistEntry[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
@@ -69,6 +131,7 @@ function HistoryPage() {
       if (!res.ok) { setAuthError(true); setLoading(false); return; }
       const data = await res.json();
       setHistory(data.history);
+      setCompletedChecklists(data.completed || []);
       setUser(data.user);
     } catch {
       setAuthError(true);
@@ -123,123 +186,130 @@ function HistoryPage() {
   }
 
   return (
-    <div style={{ background: "#0F1117", minHeight: "100vh" }}>
-      {/* Header */}
-      <header style={{
-        background: "#181C27", borderBottom: "1px solid #2A3045",
-        padding: "0 24px", position: "sticky", top: 0, zIndex: 100
-      }}>
-        <div style={{ maxWidth: 1000, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <div className="page-shell">
+      <header className="history-header">
+        <div className="history-header-inner">
+          <div className="history-header-left">
             <Link
               href={isLocalDev ? "/" : `/?sasi-token=${encodeURIComponent(token)}`}
-              style={{
-                color: "#7A82A0", textDecoration: "none", fontSize: 13,
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "6px 10px", borderRadius: 6, border: "1px solid #2A3045"
-              }}
+              className="history-back-link"
             >
               ← Checklist
             </Link>
-            <div style={{ width: 1, height: 20, background: "#2A3045" }} />
-            <span style={{ color: "#E8EAF0", fontWeight: 600, fontSize: 15 }}>Histórico de Alterações</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", background: "#1E2333", borderRadius: 6, border: "1px solid #2A3045" }}>
-            <div style={{ width: 24, height: 24, background: "#3B6EF5", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "white" }}>
-              {user.name.charAt(0).toUpperCase()}
-            </div>
-            <span style={{ color: "#E8EAF0", fontSize: 13 }}>{user.name}</span>
+          <div className="history-header-main">
+            <span className="history-page-title">Histórico de Alterações</span>
+            <span className="history-user-badge">
+              <span>{user.name.charAt(0).toUpperCase()}</span>
+              <span>{user.name}</span>
+            </span>
           </div>
         </div>
       </header>
 
-      <main style={{ maxWidth: 1000, margin: "0 auto", padding: "24px" }}>
-        {/* Stats */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-          <div style={{ background: "#181C27", border: "1px solid #2A3045", borderRadius: 10, padding: "16px 20px", flex: 1, minWidth: 150 }}>
-            <div style={{ color: "#3B6EF5", fontSize: 28, fontWeight: 700 }}>{history.length}</div>
-            <div style={{ color: "#4A5270", fontSize: 12, marginTop: 4 }}>Total de alterações</div>
+      <main className="page-container">
+        <div className="history-stats-grid">
+          <div className="history-stat-card">
+            <div className="history-stat-value">{history.length}</div>
+            <div className="history-stat-label">Total de alterações</div>
           </div>
-          <div style={{ background: "#181C27", border: "1px solid #2A3045", borderRadius: 10, padding: "16px 20px", flex: 1, minWidth: 150 }}>
-            <div style={{ color: "#34D399", fontSize: 28, fontWeight: 700 }}>
+          <div className="history-stat-card">
+            <div className="history-stat-value">
               {history.filter((h) => h.new_status === "CONCLUIDO").length}
             </div>
-            <div style={{ color: "#4A5270", fontSize: 12, marginTop: 4 }}>Marcadas concluídas</div>
+            <div className="history-stat-label">Marcadas concluídas</div>
           </div>
-          <div style={{ background: "#181C27", border: "1px solid #2A3045", borderRadius: 10, padding: "16px 20px", flex: 1, minWidth: 150 }}>
-            <div style={{ color: "#A78BFA", fontSize: 28, fontWeight: 700 }}>
-              {new Set(history.map((h) => h.user_id)).size}
-            </div>
-            <div style={{ color: "#4A5270", fontSize: 12, marginTop: 4 }}>Usuários ativos</div>
+          <div className="history-stat-card">
+            <div className="history-stat-value">{completedChecklists.length}</div>
+            <div className="history-stat-label">Finalizações de checklist</div>
+          </div>
+          <div className="history-stat-card">
+            <div className="history-stat-value">{new Set(completedChecklists.map((c) => c.user_id)).size}</div>
+            <div className="history-stat-label">Finalizadores únicos</div>
           </div>
         </div>
 
-        {/* Search */}
-        <div style={{ position: "relative", marginBottom: 16 }}>
+        <div className="history-actions-row">
+          <button
+            type="button"
+            className="history-export-button"
+            onClick={() => exportHistoryCsv(history, completedChecklists)}
+          >
+            Exportar CSV
+          </button>
+        </div>
+
+        <div className="history-search">
           <input
+            className="history-search-input"
             type="text"
             placeholder="Buscar no histórico..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: "100%", background: "#181C27", border: "1px solid #2A3045",
-              borderRadius: 8, padding: "10px 12px 10px 38px", color: "#E8EAF0",
-              fontSize: 13, outline: "none"
-            }}
           />
-          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#4A5270" }}>🔍</span>
+          <span className="search-icon">🔍</span>
         </div>
 
-        {/* History List */}
+        <section className="history-completions-section">
+          <div className="history-section-header">
+            <h2 style={{ color: "#E8EAF0", fontSize: 16, margin: 0 }}>Finalizações de checklist</h2>
+          </div>
+          {completedChecklists.length === 0 ? (
+            <div className="history-empty-state">
+              <p>Nenhuma finalização de checklist registrada ainda.</p>
+            </div>
+          ) : (
+            <div className="history-completions-list">
+              {completedChecklists.map((entry) => (
+                <div key={entry.id} className="history-completion-card">
+                  <div>
+                    <div className="history-completion-user">{entry.user_name}</div>
+                    <div className="history-completion-meta">{entry.total_items} itens concluídos em {formatDate(entry.completed_at)}</div>
+                  </div>
+                  <div className="history-completion-count">{entry.completed_items}/{entry.total_items}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
         {filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 24px", background: "#181C27", borderRadius: 12, border: "1px solid #2A3045" }}>
-            <p style={{ color: "#4A5270", fontSize: 15, margin: 0 }}>
+          <div className="history-empty-state">
+            <p>
               {history.length === 0 ? "Nenhuma alteração registrada ainda." : "Nenhum resultado encontrado."}
             </p>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="history-list">
             {filtered.map((entry) => (
               <div
                 key={entry.id}
-                style={{
-                  background: "#181C27", border: "1px solid #2A3045",
-                  borderRadius: 10, padding: "16px 20px",
-                  borderLeft: `3px solid ${STATUS_COLOR[entry.new_status] || "#2A3045"}`
-                }}
+                className="history-card"
+                style={{ borderLeftColor: STATUS_COLOR[entry.new_status] || "#2A3045" }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
-                  <div style={{ flex: 1 }}>
-                    {/* Category tag */}
-                    <div style={{ marginBottom: 6 }}>
-                      <span style={{
-                        fontSize: 10, color: "#4A5270", background: "#1E2333",
-                        border: "1px solid #2A3045", borderRadius: 4, padding: "2px 8px",
-                        fontWeight: 500, letterSpacing: 0.3
-                      }}>
+                <div className="history-card-content">
+                  <div className="history-card-main">
+                    <div className="history-category-tag">
+                      <span className="history-category-badge">
                         {entry.category || "—"}
                       </span>
                     </div>
 
-                    {/* Activity */}
-                    <p style={{ color: "#C8CAD6", fontSize: 13, margin: "0 0 10px", lineHeight: 1.5 }}>
+                    <p className="history-activity">
                       {entry.activity || `Atividade ${entry.activity_id.slice(0, 8)}...`}
                     </p>
 
-                    {/* Status transition */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{
-                        fontSize: 11, fontWeight: 600, padding: "3px 10px",
-                        borderRadius: 20, border: `1px solid ${STATUS_COLOR[entry.old_status] || "#2A3045"}`,
+                    <div className="history-status-row">
+                      <span className="history-status-pill" style={{
+                        border: `1px solid ${STATUS_COLOR[entry.old_status] || "#2A3045"}`,
                         color: STATUS_COLOR[entry.old_status] || "#7A82A0",
                         background: `${STATUS_COLOR[entry.old_status] || "#2A3045"}15`
                       }}>
                         {STATUS_LABEL[entry.old_status] || entry.old_status || "—"}
                       </span>
                       <span style={{ color: "#4A5270", fontSize: 12 }}>→</span>
-                      <span style={{
-                        fontSize: 11, fontWeight: 600, padding: "3px 10px",
-                        borderRadius: 20, border: `1px solid ${STATUS_COLOR[entry.new_status] || "#2A3045"}`,
+                      <span className="history-status-pill" style={{
+                        border: `1px solid ${STATUS_COLOR[entry.new_status] || "#2A3045"}`,
                         color: STATUS_COLOR[entry.new_status] || "#7A82A0",
                         background: `${STATUS_COLOR[entry.new_status] || "#2A3045"}15`
                       }}>
@@ -248,18 +318,15 @@ function HistoryPage() {
                     </div>
 
                     {entry.observation && (
-                      <p style={{ color: "#4A5270", fontSize: 12, margin: "8px 0 0", fontStyle: "italic" }}>
+                      <p className="history-observation">
                         💬 {entry.observation}
                       </p>
                     )}
                   </div>
 
-                  {/* Meta */}
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ color: "#E8EAF0", fontSize: 13, fontWeight: 500 }}>{entry.user_name}</div>
-                    <div style={{ color: "#4A5270", fontSize: 11, marginTop: 4, fontFamily: "monospace" }}>
-                      {formatDate(entry.created_at)}
-                    </div>
+                  <div className="history-card-meta">
+                    <div className="meta-name">{entry.user_name}</div>
+                    <div className="meta-date">{formatDate(entry.created_at)}</div>
                   </div>
                 </div>
               </div>
