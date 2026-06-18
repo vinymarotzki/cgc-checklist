@@ -38,5 +38,29 @@ export async function GET(req: NextRequest) {
     LIMIT 100
   `);
 
-  return NextResponse.json({ history: result.rows, completed: completedResult.rows, user });
+  const selectedChecklistId = req.nextUrl.searchParams.get("checklist_id");
+  console.log("/api/history called with checklist_id:", selectedChecklistId);
+
+  let selectedChecklistItems: unknown[] = [];
+
+  if (selectedChecklistId) {
+    const itemsResult = await db.execute({
+      sql: `
+        SELECT id, checklist_id, activity_id, description, category, status, responsible, observation, updated_at
+        FROM completed_checklist_items
+        WHERE checklist_id = ?
+        ORDER BY category, rowid
+      `,
+      args: [selectedChecklistId],
+    });
+    console.log("completed_checklist_items rows count:", itemsResult.rows.length);
+    selectedChecklistItems = itemsResult.rows;
+  }
+
+  return NextResponse.json({
+    history: result.rows,
+    completed: completedResult.rows,
+    selectedChecklistItems,
+    user,
+  });
 }

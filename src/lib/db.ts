@@ -49,11 +49,39 @@ export async function initDb() {
   await db.execute(`
     CREATE TABLE IF NOT EXISTS completed_checklists (
       id TEXT PRIMARY KEY,
+      name TEXT,
       user_id TEXT,
       user_name TEXT,
       total_items INTEGER,
       completed_items INTEGER,
+      created_at TEXT NOT NULL,
       completed_at TEXT NOT NULL
+    )
+  `);
+
+  try {
+    await db.execute(`ALTER TABLE completed_checklists ADD COLUMN name TEXT`);
+  } catch {
+    // Column already exists in older database schema, ignore.
+  }
+
+  try {
+    await db.execute(`ALTER TABLE completed_checklists ADD COLUMN created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP`);
+  } catch {
+    // Column already exists in older database schema, ignore.
+  }
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS completed_checklist_items (
+      id TEXT PRIMARY KEY,
+      checklist_id TEXT NOT NULL,
+      activity_id TEXT NOT NULL,
+      description TEXT NOT NULL,
+      category TEXT NOT NULL,
+      status TEXT NOT NULL,
+      responsible TEXT,
+      observation TEXT,
+      updated_at TEXT NOT NULL
     )
   `);
 }

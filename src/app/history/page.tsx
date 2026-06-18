@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
+import * as XLSX from "xlsx";
 
 interface HistoryEntry {
   id: string;
@@ -24,7 +25,19 @@ interface CompletedChecklistEntry {
   user_name: string;
   total_items: number;
   completed_items: number;
+  created_at?: string;
   completed_at: string;
+}
+
+interface CompletedChecklistItem {
+  id: string;
+  activity_id: string;
+  description: string;
+  category: string;
+  status: string;
+  observation: string | null;
+  responsible: string | null;
+  updated_at: string;
 }
 
 interface User {
@@ -56,6 +69,20 @@ function formatDate(iso: string) {
   });
 }
 
+function formatDateOnly(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+  });
+}
+
+function formatTimeOnly(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString("pt-BR", {
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+}
+
 function escapeCsv(value: string | number | null | undefined) {
   if (value === undefined || value === null) return "";
   const text = String(value);
@@ -65,46 +92,87 @@ function escapeCsv(value: string | number | null | undefined) {
   return text;
 }
 
-function exportHistoryCsv(history: HistoryEntry[], completedChecklists: CompletedChecklistEntry[]) {
-  const rows: string[][] = [
-    ["Tipo", "ID", "Atividade", "Categoria", "Status Antigo", "Status Novo", "Usuário", "Observação", "Data/Hora"]
+function getCellWidth(value: string | number | null | undefined) {
+  const text = value === undefined || value === null ? "" : String(value);
+  return Math.min(Math.max(text.length + 2, 12), 50);
+}
+
+function exportChecklistXlsx(checklist: CompletedChecklistEntry, items: CompletedChecklistItem[]) {
+  const titleRow = [
+    "Data de Criação",
+    "Data de Finalização",
+    "Horário de Finalização",
+    "Usuário Responsável pela Finalização",
+    "Percentual Concluído",
+    "",
+    "",
+  ];
+  const metaRow = [
+    formatDateOnly(checklist.created_at || checklist.completed_at),
+    formatDateOnly(checklist.completed_at),
+    formatTimeOnly(checklist.completed_at),
+    checklist.user_name,
+    `${Math.round((checklist.completed_items / checklist.total_items) * 100)}%`,
+    "",
+    "",
+  ];
+  const headerRow = [
+    "Seção",
+    "Subcategoria",
+    "Atividade",
+    "Categoria",
+    "Status",
+    "Observação",
+    "Usuário Responsável",
+    "Data/Hora da Última Alteração",
   ];
 
-  history.forEach((entry) => {
+  const rows = [titleRow, metaRow, [], headerRow];
+  items.forEach((item) => {
     rows.push([
-      "Alteração",
-      entry.id,
-      entry.activity || "",
-      entry.category || "",
-      entry.old_status,
-      entry.new_status,
-      entry.user_name,
-      entry.observation || "",
-      entry.created_at,
+      item.category,
+      "",
+      item.description,
+      item.category,
+      item.status,
+      item.observation || "",
+      item.responsible || "",
+      item.updated_at,
     ]);
   });
 
-  if (completedChecklists.length > 0) {
-    rows.push([""], ["Finalização de checklist", "ID", "Usuário", "Total de Itens", "Itens Concluídos", "Data/Hora"]);
-    completedChecklists.forEach((entry) => {
-      rows.push([
-        "Finalização",
-        entry.id,
-        entry.user_name,
-        String(entry.total_items),
-        String(entry.completed_items),
-        entry.completed_at,
-      ]);
-    });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"] = rows[0].map((_, colIndex) => ({ wch: Math.max(...rows.map((row) => getCellWidth(row[colIndex])), 12) }));
+  ws["!freeze"] = { ySplit: 4 };
+
+  const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
+  for (let R = 0; R <= range.e.r; ++R) {
+    for (let C = 0; C <= range.e.c; ++C) {
+      const address = XLSX.utils.encode_cell({ r: R, c: C });
+      const cell = ws[address];
+      if (!cell) continue;
+      cell.s = cell.s || {};
+      if (R === 0 || R === 1 || R === 3) {
+        cell.s.font = { bold: true };
+      }
+      if (C === 2 || C === 5) {
+        cell.s.alignment = { wrapText: true, vertical: "top" };
+      }
+    }
   }
 
-  const csv = rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Checklist");
+  const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `historico-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
+  a.setAttribute("download", `checklist-completo-${checklist.completed_at.slice(0, 10)}.xlsx`);
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
@@ -114,6 +182,11 @@ function HistoryPage() {
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [completedChecklists, setCompletedChecklists] = useState<CompletedChecklistEntry[]>([]);
+  const [selectedChecklistId, setSelectedChecklistId] = useState<string | null>(null);
+  const [selectedChecklistItems, setSelectedChecklistItems] = useState<CompletedChecklistItem[]>([]);
+  const [fetchingItems, setFetchingItems] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
@@ -133,16 +206,82 @@ function HistoryPage() {
       setHistory(data.history);
       setCompletedChecklists(data.completed || []);
       setUser(data.user);
-    } catch {
+      if (!selectedChecklistId && data.completed && data.completed.length > 0) {
+        setSelectedChecklistId(data.completed[0].id);
+      }
+    } catch (error) {
+      console.error("Erro no fetchHistory:", error);
       setAuthError(true);
     } finally {
       setLoading(false);
     }
-  }, [token, isLocalDev]);
+  }, [token, isLocalDev, selectedChecklistId]);
 
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
+
+  useEffect(() => {
+    if (!selectedChecklistId || (!token && !isLocalDev)) return;
+
+    const fetchChecklistItems = async () => {
+      setFetchingItems(true);
+      try {
+        const query = token
+          ? `?sasi-token=${encodeURIComponent(token)}&checklist_id=${encodeURIComponent(selectedChecklistId)}`
+          : `?checklist_id=${encodeURIComponent(selectedChecklistId)}`;
+        console.log("Enviando request de checklist detalhado para /api/history", query);
+        const res = await fetch(`/api/history${query}`);
+        console.log("Response status from /api/history:", res.status);
+        if (!res.ok) {
+          console.error("Resposta não OK da rota /api/history", await res.text());
+          setSelectedChecklistItems([]);
+          return;
+        }
+        const data = await res.json();
+        console.log("Dados retornados de selectedChecklistItems:", data.selectedChecklistItems);
+        setSelectedChecklistItems(data.selectedChecklistItems || []);
+      } catch (error) {
+        console.error("Erro ao buscar itens do checklist selecionado:", error);
+        setSelectedChecklistItems([]);
+      } finally {
+        setFetchingItems(false);
+      }
+    };
+
+    fetchChecklistItems();
+  }, [selectedChecklistId, token, isLocalDev]);
+
+  const handleExport = () => {
+    console.log("Botão clicado");
+    console.log("Checklist selecionado:", selectedChecklistId);
+    setExportError(null);
+    if (!selectedChecklistId) {
+      setExportError("Selecione um checklist antes de exportar.");
+      return;
+    }
+    const checklist = completedChecklists.find((entry) => entry.id === selectedChecklistId);
+    if (!checklist) {
+      setExportError("Checklist selecionado não encontrado.");
+      return;
+    }
+    if (selectedChecklistItems.length === 0) {
+      setExportError("Nenhum item encontrado para o checklist selecionado.");
+      return;
+    }
+
+    setExporting(true);
+    try {
+      console.log("Gerando XLSX...");
+      exportChecklistXlsx(checklist, selectedChecklistItems);
+      console.log("Download iniciado");
+    } catch (error) {
+      console.error("Erro ao exportar XLSX:", error);
+      setExportError("Erro ao exportar XLSX. Veja o console para mais detalhes.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const filtered = history.filter((h) => {
     if (!searchTerm) return true;
@@ -230,14 +369,40 @@ function HistoryPage() {
         </div>
 
         <div className="history-actions-row">
-          <button
-            type="button"
-            className="history-export-button"
-            onClick={() => exportHistoryCsv(history, completedChecklists)}
-          >
-            Exportar CSV
-          </button>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <select
+              value={selectedChecklistId ?? ""}
+              onChange={(e) => setSelectedChecklistId(e.target.value)}
+              style={{
+                background: "#181C27",
+                border: "1px solid #2A3045",
+                borderRadius: 8,
+                color: "#E8EAF0",
+                padding: "10px 14px",
+                minWidth: 280,
+              }}
+            >
+              {completedChecklists.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {formatDate(entry.completed_at)} — {entry.user_name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="history-export-button"
+              disabled={!selectedChecklistId || selectedChecklistItems.length === 0 || fetchingItems || exporting}
+              onClick={handleExport}
+            >
+              {exporting ? "Exportando..." : "Exportar XLSX do Checklist"}
+            </button>
+          </div>
         </div>
+        {exportError && (
+          <div style={{ marginTop: 12, color: "#F87171", fontSize: 14 }}>
+            {exportError}
+          </div>
+        )}
 
         <div className="history-search">
           <input

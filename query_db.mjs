@@ -1,0 +1,10 @@
+import { createClient } from '@libsql/client';
+const db = createClient({ url: process.env.TURSO_DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN });
+const checklists = await db.execute('SELECT id, user_id, user_name, total_items, completed_items, created_at, completed_at FROM completed_checklists ORDER BY completed_at DESC');
+console.log('completed_checklists:', JSON.stringify(checklists.rows, null, 2));
+const items = await db.execute('SELECT * FROM completed_checklist_items ORDER BY checklist_id, rowid LIMIT 50');
+console.log('completed_checklist_items sample:', JSON.stringify(items.rows, null, 2));
+const counts = await db.execute('SELECT checklist_id, COUNT(*) AS count FROM completed_checklist_items GROUP BY checklist_id');
+console.log('item counts per checklist:', JSON.stringify(counts.rows, null, 2));
+const tables = await db.execute("SELECT name, type FROM sqlite_schema WHERE type='table' ORDER BY name");
+console.log('tables:', JSON.stringify(tables.rows, null, 2));
