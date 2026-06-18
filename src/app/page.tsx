@@ -19,6 +19,14 @@ interface User {
   name: string;
 }
 
+interface Observation {
+  id: string;
+  activity_id: string;
+  text: string;
+  created_at: string;
+  updated_at: string;
+}
+
 const STATUS_OPTIONS = [
   { value: "NAO_INICIADO", label: "Não Iniciado", color: "#b10202" },
   { value: "EM_ANDAMENTO", label: "Em Andamento", color: "#ffe5a0" },
@@ -87,7 +95,9 @@ function ChecklistPage() {
   const [completing, setCompleting] = useState(false);
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
   const [completionError, setCompletionError] = useState<string | null>(null);
-  const [editingObs, setEditingObs] = useState<string | null>(null);
+  const [observations, setObservations] = useState<Observation[]>([]);
+  const [activeActivityId, setActiveActivityId] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [obsValue, setObsValue] = useState("");
   const [filter, setFilter] = useState("TODOS");
   const [searchTerm, setSearchTerm] = useState("");
@@ -120,9 +130,23 @@ function ChecklistPage() {
     }
   }, [token, isLocalDev]);
 
+  const fetchObservations = useCallback(async () => {
+    if (!token && !isLocalDev) return;
+    try {
+      const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
+      const res = await fetch(`/api/observations${query}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setObservations(data.observations || []);
+    } catch {
+      // ignore
+    }
+  }, [token, isLocalDev]);
+
   useEffect(() => {
     fetchActivities();
-  }, [fetchActivities]);
+    fetchObservations();
+  }, [fetchActivities, fetchObservations]);
 
   async function updateActivity(id: string, patch: Partial<Activity>) {
     setSaving(id);
@@ -141,10 +165,62 @@ function ChecklistPage() {
     }
   }
 
-  function saveObs(id: string) {
-    updateActivity(id, { observation: obsValue });
-    setEditingObs(null);
+  async function saveObs() {
+    if (!activeActivityId || obsValue.trim() === "") {
+      setActiveActivityId(null);
+      setEditingNoteId(null);
+      return;
+    }
+
+    const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
+    const payload = { text: obsValue.trim() };
+
+    if (editingNoteId) {
+      const res = await fetch(`/api/observations${query}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingNoteId, ...payload }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setObservations((prev) => prev.map((note) => note.id === editingNoteId ? data.observation : note));
+    } else {
+      const res = await fetch(`/api/observations${query}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activity_id: activeActivityId, ...payload }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setObservations((prev) => [...prev, data.observation]);
+    }
+
+    setActiveActivityId(null);
+    setEditingNoteId(null);
+    setObsValue("");
   }
+
+  async function deleteObs(id: string) {
+    const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
+    const res = await fetch(`/api/observations${query}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (!res.ok) return;
+    setObservations((prev) => prev.filter((note) => note.id !== id));
+    if (editingNoteId === id) {
+      setActiveActivityId(null);
+      setEditingNoteId(null);
+      setObsValue("");
+    }
+  }
+
+  const observationsByActivity = observations.reduce<Record<string, Observation[]>>((acc, note) => {
+    acc[note.activity_id] = acc[note.activity_id] || [];
+    acc[note.activity_id].push(note);
+    return acc;
+  }, {});
 
   const totalStats = getCategoryStats(activities);
   const notStartedCount = totalStats.total - totalStats.done - totalStats.inProgress - totalStats.blocked;
@@ -450,11 +526,39 @@ function ChecklistPage() {
                             <p style={{ color: "#C8CAD6", fontSize: 13, margin: 0, lineHeight: 1.5 }}>
                               {activity.activity}
                             </p>
-                            {activity.observation && (
-                              <p style={{ color: "#4A5270", fontSize: 12, margin: "4px 0 0", fontStyle: "italic" }}>
-                                💬 {activity.observation}
-                              </p>
-                            )}
+                            {(observationsByActivity[activity.id] || []).map((note) => (
+                              <div key={note.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, marginTop: 4 }}>
+                                <p style={{ color: "#4A5270", fontSize: 12, margin: 0, fontStyle: "italic", flex: 1, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+                                  💬 {note.text}
+                                </p>
+                                <button
+                                  onClick={() => {
+                                    setActiveActivityId(activity.id);
+                                    setEditingNoteId(note.id);
+                                    setObsValue(note.text);
+                                  }}
+                                  title="Editar observação"
+                                  style={{
+                                    background: "transparent", border: "none",
+                                    padding: "4px", cursor: "pointer",
+                                    color: "#60A5FA", fontSize: 12, transition: "color 0.15s"
+                                  }}
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => deleteObs(note.id)}
+                                  title="Apagar observação"
+                                  style={{
+                                    background: "transparent", border: "none",
+                                    padding: "4px", cursor: "pointer",
+                                    color: "#F87171", fontSize: 12, transition: "color 0.15s"
+                                  }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
                           </div>
 
                           {/* Controls */}
@@ -481,14 +585,15 @@ function ChecklistPage() {
                             {/* Obs button */}
                             <button
                               onClick={() => {
-                                setEditingObs(activity.id);
-                                setObsValue(activity.observation || "");
+                                setActiveActivityId(activity.id);
+                                setEditingNoteId(null);
+                                setObsValue("");
                               }}
-                              title="Editar observação"
+                              title="Nova observação"
                               style={{
                                 background: "transparent", border: "1px solid #2A3045",
                                 borderRadius: 6, padding: "5px 8px", cursor: "pointer",
-                                color: activity.observation ? "#60A5FA" : "#4A5270",
+                                color: (observationsByActivity[activity.id] || []).length > 0 ? "#60A5FA" : "#4A5270",
                                 fontSize: 13, transition: "all 0.15s"
                               }}
                             >
@@ -516,21 +621,24 @@ function ChecklistPage() {
       </main>
 
       {/* Observation Modal */}
-      {editingObs && (
+      {(activeActivityId !== null) && (
         <div
           style={{
             position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
             display: "flex", alignItems: "center", justifyContent: "center",
             zIndex: 1000, padding: 20
           }}
-          onClick={(e) => { if (e.target === e.currentTarget) setEditingObs(null); }}
+          onClick={(e) => { if (e.target === e.currentTarget) {
+            setActiveActivityId(null);
+            setEditingNoteId(null);
+          } }}
         >
           <div style={{
             background: "#1E2333", border: "1px solid #2A3045",
             borderRadius: 12, padding: 24, width: "100%", maxWidth: 480
           }}>
             <h3 style={{ color: "#E8EAF0", fontSize: 16, fontWeight: 600, margin: "0 0 16px" }}>
-              Observação
+              {editingNoteId ? "Editar observação" : "Nova observação"}
             </h3>
             <textarea
               value={obsValue}
@@ -547,17 +655,34 @@ function ChecklistPage() {
             />
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
               <button
-                onClick={() => setEditingObs(null)}
+                onClick={() => {
+                  setActiveActivityId(null);
+                  setEditingNoteId(null);
+                }}
                 style={{
-                  background: "transparent", border: "1px solid #2A3045",
-                  borderRadius: 8, padding: "8px 16px", color: "#7A82A0",
+                  background: "transparent", border: "none",
+                  padding: "8px", color: "#7A82A0",
                   fontSize: 13, cursor: "pointer"
                 }}
               >
                 Cancelar
               </button>
+              {editingNoteId && (
+                <button
+                  onClick={() => {
+                    deleteObs(editingNoteId);
+                  }}
+                  style={{
+                    background: "transparent", border: "none",
+                    padding: "8px", color: "#F87171",
+                    fontSize: 13, cursor: "pointer"
+                  }}
+                >
+                  Apagar
+                </button>
+              )}
               <button
-                onClick={() => saveObs(editingObs)}
+                onClick={saveObs}
                 style={{
                   background: "#3B6EF5", border: "none",
                   borderRadius: 8, padding: "8px 20px", color: "white",

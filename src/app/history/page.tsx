@@ -61,6 +61,17 @@ const STATUS_COLOR: Record<string, string> = {
   IMPEDIDO: "#b10202",
 };
 
+const OBSERVATION_EVENT_PREFIXES = [
+  { prefix: "Observação adicionada:", label: "Observação criada", color: "#60A5FA" },
+  { prefix: "Observação editada:", label: "Observação editada", color: "#F59E0B" },
+  { prefix: "Observação apagada:", label: "Observação apagada", color: "#F87171" },
+];
+
+function getObservationEvent(observation: string | null) {
+  if (!observation) return null;
+  return OBSERVATION_EVENT_PREFIXES.find((event) => observation.startsWith(event.prefix)) || null;
+}
+
 function formatDate(iso: string) {
   const d = new Date(iso);
   return d.toLocaleString("pt-BR", {
@@ -449,56 +460,80 @@ function HistoryPage() {
           </div>
         ) : (
           <div className="history-list">
-            {filtered.map((entry) => (
-              <div
-                key={entry.id}
-                className="history-card"
-                style={{ borderLeftColor: STATUS_COLOR[entry.new_status] || "#2A3045" }}
-              >
-                <div className="history-card-content">
-                  <div className="history-card-main">
-                    <div className="history-category-tag">
-                      <span className="history-category-badge">
-                        {entry.category || "—"}
-                      </span>
-                    </div>
+            {filtered.map((entry) => {
+              const event = getObservationEvent(entry.observation);
+              const observationText = event
+                ? entry.observation?.slice(event.prefix.length).trim()
+                : entry.observation;
 
-                    <p className="history-activity">
-                      {entry.activity || `Atividade ${entry.activity_id.slice(0, 8)}...`}
-                    </p>
+              const showStatusRow = !(
+                event &&
+                entry.old_status === "SEM_STATUS" &&
+                entry.new_status === "SEM_STATUS"
+              );
 
-                    <div className="history-status-row">
-                      <span className="history-status-pill" style={{
-                        border: `1px solid ${STATUS_COLOR[entry.old_status] || "#2A3045"}`,
-                        color: STATUS_COLOR[entry.old_status] || "#7A82A0",
-                        background: `${STATUS_COLOR[entry.old_status] || "#2A3045"}15`
-                      }}>
-                        {STATUS_LABEL[entry.old_status] || entry.old_status || "—"}
-                      </span>
-                      <span style={{ color: "#4A5270", fontSize: 12 }}>→</span>
-                      <span className="history-status-pill" style={{
-                        border: `1px solid ${STATUS_COLOR[entry.new_status] || "#2A3045"}`,
-                        color: STATUS_COLOR[entry.new_status] || "#7A82A0",
-                        background: `${STATUS_COLOR[entry.new_status] || "#2A3045"}15`
-                      }}>
-                        {STATUS_LABEL[entry.new_status] || entry.new_status || "—"}
-                      </span>
-                    </div>
+              return (
+                <div
+                  key={entry.id}
+                  className="history-card"
+                  style={{ borderLeftColor: event?.color || STATUS_COLOR[entry.new_status] || "#2A3045" }}
+                >
+                  <div className="history-card-content">
+                    <div className="history-card-main">
+                      <div className="history-category-tag">
+                        <span className="history-category-badge">
+                          {entry.category || "—"}
+                        </span>
+                      </div>
 
-                    {entry.observation && (
-                      <p className="history-observation">
-                        💬 {entry.observation}
+                      <p className="history-activity">
+                        {entry.activity || `Atividade ${entry.activity_id.slice(0, 8)}...`}
                       </p>
-                    )}
-                  </div>
 
-                  <div className="history-card-meta">
-                    <div className="meta-name">{entry.user_name}</div>
-                    <div className="meta-date">{formatDate(entry.created_at)}</div>
+                      {showStatusRow && (
+                        <div className="history-status-row">
+                          <span className="history-status-pill" style={{
+                            border: `1px solid ${STATUS_COLOR[entry.old_status] || "#2A3045"}`,
+                            color: STATUS_COLOR[entry.old_status] || "#7A82A0",
+                            background: `${STATUS_COLOR[entry.old_status] || "#2A3045"}15`
+                          }}>
+                            {STATUS_LABEL[entry.old_status] || entry.old_status || "—"}
+                          </span>
+                          <span style={{ color: "#4A5270", fontSize: 12 }}>→</span>
+                          <span className="history-status-pill" style={{
+                            border: `1px solid ${STATUS_COLOR[entry.new_status] || "#2A3045"}`,
+                            color: STATUS_COLOR[entry.new_status] || "#7A82A0",
+                            background: `${STATUS_COLOR[entry.new_status] || "#2A3045"}15`
+                          }}>
+                            {STATUS_LABEL[entry.new_status] || entry.new_status || "—"}
+                          </span>
+                        </div>
+                      )}
+
+                      {event && (
+                        <span className="history-observation-badge" style={{
+                          borderColor: event.color,
+                          color: event.color,
+                          background: `${event.color}20`,
+                        }}>
+                          {event.label}
+                        </span>
+                      )}
+                      {observationText && (
+                        <p className="history-observation" style={{ marginTop: event ? 8 : 0 }}>
+                          💬 {observationText}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="history-card-meta">
+                      <div className="meta-name">{entry.user_name}</div>
+                      <div className="meta-date">{formatDate(entry.created_at)}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>

@@ -84,4 +84,16 @@ export async function initDb() {
       updated_at TEXT NOT NULL
     )
   `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS observations (
+      id TEXT PRIMARY KEY,
+      activity_id TEXT NOT NULL,
+      text TEXT NOT NULL,
+      user_id TEXT,
+      user_name TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
 }

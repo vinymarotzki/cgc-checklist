@@ -76,8 +76,19 @@ export async function POST(req: NextRequest) {
       args: [activity.id],
     });
 
+    const lastObservationResult = await db.execute({
+      sql: `SELECT text FROM observations
+            WHERE activity_id = ?
+            ORDER BY updated_at DESC
+            LIMIT 1`,
+      args: [activity.id],
+    });
+
     const lastUpdatedRow = lastUpdateResult.rows[0] as unknown as { last_updated_at: string | null };
     const lastUpdatedAt = lastUpdatedRow?.last_updated_at || completedAt;
+    const observation = lastObservationResult.rows.length > 0
+      ? String(lastObservationResult.rows[0].text)
+      : activity.observation ?? null;
 
     await db.execute({
       sql: `INSERT INTO completed_checklist_items (id, checklist_id, activity_id, description, category, status, responsible, observation, updated_at)
@@ -90,7 +101,7 @@ export async function POST(req: NextRequest) {
         activity.category,
         activity.status,
         activity.responsible ?? null,
-        activity.observation ?? null,
+        observation,
         lastUpdatedAt,
       ],
     });
