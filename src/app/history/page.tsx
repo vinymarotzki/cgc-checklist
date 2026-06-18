@@ -168,12 +168,15 @@ function exportChecklistXlsx(checklist: CompletedChecklistEntry, items: Complete
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
+  a.target = "_blank";
   a.setAttribute("download", `checklist-completo-${checklist.completed_at.slice(0, 10)}.xlsx`);
   a.style.display = "none";
   document.body.appendChild(a);
-  a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 function HistoryPage() {
