@@ -1,0 +1,3 @@
+# Todo arquivo de texto é gravado e extraído com LF, em qualquer sistema.
+# Sem isso, o checkout no Windows converte para CRLF e cada `git add` avisa.
+* text=auto eol=lf
