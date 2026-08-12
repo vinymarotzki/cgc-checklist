@@ -1,0 +1,13 @@
+.next/
+node_modules/
+.env.local
+.env
+*.db
+.DS_Store
+dist/
+.vercel/
+*.tsbuildinfo
+*.log
+
+# Script de inspeção manual do banco, roda solto com tsx/node
+query_db.mjs
