@@ -2,12 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Repository layout warning
+## Repository layout
 
-The repository contains **two copies of `src/`**. Only `sasi-checklist/` is the real
-application — it is the only directory with `package.json`, `node_modules` and
-`.env.local`. The copy at the repository root is leftover residue: never edit it,
-and never `npm` anything from the root.
+The application lives entirely in `sasi-checklist/` — the only directory with
+`package.json`, `node_modules` and `.env.local`. The repository root holds just
+`CLAUDE.md`, `README.md` and the git config files.
+
+A duplicated copy of `src/` used to sit at the root, along with its own
+`next.config.ts`, `postcss.config.js`, `tailwind.config.ts` and `package-lock.json`.
+It was residue from an older layout and has been deleted; do not recreate it.
 
 **All commands below must run from `sasi-checklist/`.**
 
@@ -38,9 +41,9 @@ Next.js 16 (App Router) + React 19 + TypeScript strict, Tailwind 3, Turso/libSQL
 (`@libsql/client`), `xlsx` for spreadsheet export, deployed on Vercel. Path alias
 `@/*` maps to `src/*`.
 
-Note `next.config.js` (CommonJS, sets `outputFileTracingRoot: __dirname` so the
-duplicated tree above does not confuse tracing) is the config actually used; the
-`next.config.ts` at the root belongs to the residual copy.
+The config is `sasi-checklist/next.config.js` (CommonJS). It sets
+`outputFileTracingRoot: __dirname`, which dates from the duplicated tree described
+above — it kept Next's file tracing from wandering into the root copy.
 
 ## Architecture
 
