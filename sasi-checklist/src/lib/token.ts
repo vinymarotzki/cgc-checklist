@@ -1,16 +1,24 @@
 /**
- * Leitura do token de acesso na URL — fonte única para cliente e servidor.
+ * Leitura do token de acesso — fonte única para cliente e servidor.
  *
- * Regra única: o token só é aceito no parâmetro `sasi-token`. Qualquer outra
- * forma — parâmetro ausente, nome diferente (o antigo `token`), valor vazio ou
- * só com espaços — é tratada como "sem acesso". Não existe fallback de nome de
- * parâmetro nem bypass por host: localhost segue exatamente a mesma regra da
- * produção, para que o comportamento testado em desenvolvimento seja o mesmo
- * que o usuário final encontra.
+ * O token só entra pela URL uma única vez, no primeiro acesso: o hook
+ * `useSasiToken` (`@/hooks/useSasiToken`) lê `sasi-token` da URL, guarda em
+ * `sessionStorage` e limpa o parâmetro da barra de endereço. A partir daí,
+ * páginas e `fetch` internos carregam o token pelo header `x-sasi-token` — a
+ * URL nunca mais volta a exibi-lo. Qualquer outra forma — parâmetro ausente,
+ * nome diferente, valor vazio ou só com espaços — é tratada como "sem
+ * acesso". Não existe bypass por host: localhost segue exatamente a mesma
+ * regra da produção.
  */
 
-/** Nome do parâmetro de query que carrega o token. Não há alternativa aceita. */
+/** Nome do parâmetro de query aceito só no primeiro acesso. Não há alternativa. */
 export const TOKEN_PARAM = "sasi-token";
+
+/** Header usado para carregar o token em toda requisição interna após o primeiro acesso. */
+export const TOKEN_HEADER = "x-sasi-token";
+
+/** Chave usada para guardar o token em `sessionStorage` no cliente. */
+export const TOKEN_STORAGE_KEY = "sasi-token";
 
 /**
  * Assinatura mínima compartilhada por `URLSearchParams` (servidor) e pelo
@@ -20,28 +28,38 @@ export interface ReadableSearchParams {
   get(name: string): string | null;
 }
 
-/**
- * Devolve o token da URL ou `null` quando a URL não está no modelo esperado.
- * `null` significa sempre "usuário sem acesso" — quem chama não deve inventar
- * usuário nem seguir adiante.
- */
-export function readSasiToken(params: ReadableSearchParams): string | null {
-  const raw = params.get(TOKEN_PARAM);
-  if (typeof raw !== "string") return null;
+/** Assinatura mínima compartilhada por `Headers` (cliente e servidor). */
+export interface ReadableHeaders {
+  get(name: string): string | null;
+}
 
+function normalizeToken(raw: string | null): string | null {
+  if (typeof raw !== "string") return null;
   const token = raw.trim();
   return token.length > 0 ? token : null;
 }
 
 /**
- * Query string pronta para propagar o token em links e `fetch` internos.
- * Sem token a query sai vazia e a requisição será recusada com 401 — o que é o
- * comportamento desejado, já que sem token não há acesso.
+ * Devolve o token de `sasi-token` na URL, ou `null` quando ausente/vazio.
+ * Usado só no primeiro acesso, antes do token ir para `sessionStorage`.
  */
-export function sasiTokenQuery(token: string | null): string {
-  return token ? `?${TOKEN_PARAM}=${encodeURIComponent(token)}` : "";
+export function readSasiToken(params: ReadableSearchParams): string | null {
+  return normalizeToken(params.get(TOKEN_PARAM));
 }
 
-/** Mensagem única exibida/retornada quando a URL não traz `sasi-token`. */
+/**
+ * Devolve o token do header `x-sasi-token`, ou `null` quando ausente/vazio.
+ * É o que toda rota de API deve usar para autenticar requisições internas.
+ */
+export function readSasiTokenHeader(headers: ReadableHeaders): string | null {
+  return normalizeToken(headers.get(TOKEN_HEADER));
+}
+
+/** Header pronto para anexar a um `fetch` interno. Sem token, devolve objeto vazio. */
+export function sasiAuthHeaders(token: string | null): Record<string, string> {
+  return token ? { [TOKEN_HEADER]: token } : {};
+}
+
+/** Mensagem única exibida/retornada quando não há token válido. */
 export const NO_ACCESS_MESSAGE =
   "Acesso negado. Abra a página com ?sasi-token=SEU_TOKEN na URL.";

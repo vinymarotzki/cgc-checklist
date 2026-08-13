@@ -113,13 +113,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Selecione um grupo para listar as atividades." }, { status: 400 });
   }
 
-  // `requireAuth` já garantiu o token da URL; SASI_API_TOKEN continua como
-  // alternativa de servidor para ambientes que usam token próprio.
+  // `requireAuth` já garantiu o token do header; a Bone API usa `SASI_API_TOKEN`
+  // (escopo de provider), não o token pessoal — ver `resolveSasiToken`.
   const sasiToken = resolveSasiToken(auth.token);
   if (!sasiToken) {
     return NextResponse.json(
       {
-        error: "Token da API SASI não informado. Acesse com ?sasi-token=SEU_TOKEN para consultar as atividades do CGC.",
+        error: "Token da API SASI não informado. Acesse com ?sasi-token=SEU_TOKEN na primeira visita para consultar as atividades do CGC.",
         kind: "auth",
       },
       { status: 401 }

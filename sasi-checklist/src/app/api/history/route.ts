@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, initDb } from "@/lib/db";
 import { authenticateToken } from "@/lib/auth";
-import { NO_ACCESS_MESSAGE, readSasiToken } from "@/lib/token";
+import { NO_ACCESS_MESSAGE, readSasiTokenHeader } from "@/lib/token";
 
 export async function GET(req: NextRequest) {
-  // O token só é aceito em `sasi-token`; fora desse modelo, é usuário sem acesso.
-  const token = readSasiToken(req.nextUrl.searchParams);
+  // O token só é aceito no header `x-sasi-token`; fora desse modelo, é usuário sem acesso.
+  const token = readSasiTokenHeader(req.headers);
 
   if (!token) {
     return NextResponse.json({ error: NO_ACCESS_MESSAGE }, { status: 401 });

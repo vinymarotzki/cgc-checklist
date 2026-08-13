@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, initDb } from "@/lib/db";
 import { authenticateToken } from "@/lib/auth";
-import { NO_ACCESS_MESSAGE, readSasiToken } from "@/lib/token";
+import { NO_ACCESS_MESSAGE, readSasiTokenHeader } from "@/lib/token";
 import { v4 as uuidv4 } from "uuid";
 
-// O token só é aceito em `sasi-token`; fora desse modelo, é usuário sem acesso.
+// O token só é aceito no header `x-sasi-token`; fora desse modelo, é usuário sem acesso.
 async function requireAuth(req: NextRequest) {
-  const token = readSasiToken(req.nextUrl.searchParams);
+  const token = readSasiTokenHeader(req.headers);
 
   if (!token) {
     return { user: null, error: NextResponse.json({ error: NO_ACCESS_MESSAGE }, { status: 401 }) };
