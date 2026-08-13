@@ -205,6 +205,9 @@ function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  // Todo o histórico (mudanças de status, observações criadas/editadas/apagadas)
+  // fica dentro de um único dropdown, fechado por padrão.
+  const [changesOpen, setChangesOpen] = useState(false);
   const isLocalDev =
     typeof window !== "undefined" &&
     window.location.protocol === "http:" &&
@@ -418,17 +421,6 @@ function HistoryPage() {
           </div>
         )}
 
-        <div className="history-search">
-          <input
-            className="history-search-input"
-            type="text"
-            placeholder="Buscar no histórico..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <span className="search-icon">🔍</span>
-        </div>
-
         <section className="history-completions-section">
           <div className="history-section-header">
             <h2 style={{ color: "#E8EAF0", fontSize: 16, margin: 0 }}>Finalizações de checklist</h2>
@@ -452,7 +444,35 @@ function HistoryPage() {
           )}
         </section>
 
-        {filtered.length === 0 ? (
+        <section className="history-collapse">
+          <button
+            type="button"
+            className="history-collapse-trigger"
+            aria-expanded={changesOpen}
+            aria-controls="history-changes-panel"
+            onClick={() => setChangesOpen((open) => !open)}
+          >
+            <span className="history-collapse-label">
+              <span>Alterações, edições, exclusões e comentários</span>
+              <span className="history-collapse-count">{history.length}</span>
+            </span>
+            <span className="history-collapse-caret" data-open={changesOpen}>▼</span>
+          </button>
+
+          {changesOpen && (
+            <div className="history-collapse-body" id="history-changes-panel">
+              <div className="history-search">
+                <input
+                  className="history-search-input"
+                  type="text"
+                  placeholder="Buscar no histórico..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <span className="search-icon">🔍</span>
+              </div>
+
+              {filtered.length === 0 ? (
           <div className="history-empty-state">
             <p>
               {history.length === 0 ? "Nenhuma alteração registrada ainda." : "Nenhum resultado encontrado."}
@@ -535,7 +555,10 @@ function HistoryPage() {
               );
             })}
           </div>
-        )}
+              )}
+            </div>
+          )}
+        </section>
       </main>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

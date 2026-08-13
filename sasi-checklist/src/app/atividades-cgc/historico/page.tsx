@@ -65,6 +65,9 @@ function CgcHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  // Todo o histórico (status alterado, comentários criados/editados/apagados)
+  // fica dentro de um único dropdown, fechado por padrão.
+  const [changesOpen, setChangesOpen] = useState(false);
 
   const query = useMemo(
     () => (token ? `?sasi-token=${encodeURIComponent(token)}` : ""),
@@ -188,18 +191,35 @@ function CgcHistoryPage() {
           )}
         </section>
 
-        <div className="history-search">
-          <input
-            className="history-search-input"
-            type="text"
-            placeholder="Buscar no histórico..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <span className="search-icon">🔍</span>
-        </div>
+        <section className="history-collapse">
+          <button
+            type="button"
+            className="history-collapse-trigger"
+            aria-expanded={changesOpen}
+            aria-controls="cgc-history-changes-panel"
+            onClick={() => setChangesOpen((open) => !open)}
+          >
+            <span className="history-collapse-label">
+              <span>Alterações, edições, exclusões e comentários</span>
+              <span className="history-collapse-count">{history.length}</span>
+            </span>
+            <span className="history-collapse-caret" data-open={changesOpen}>▼</span>
+          </button>
 
-        {filtered.length === 0 ? (
+          {changesOpen && (
+            <div className="history-collapse-body" id="cgc-history-changes-panel">
+              <div className="history-search">
+                <input
+                  className="history-search-input"
+                  type="text"
+                  placeholder="Buscar no histórico..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <span className="search-icon">🔍</span>
+              </div>
+
+              {filtered.length === 0 ? (
           <div className="history-empty-state">
             <p>
               {history.length === 0
@@ -290,7 +310,10 @@ function CgcHistoryPage() {
               );
             })}
           </div>
-        )}
+              )}
+            </div>
+          )}
+        </section>
       </main>
     </div>
   );

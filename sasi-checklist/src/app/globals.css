@@ -290,6 +290,83 @@ select option {
   font-weight: 700;
 }
 
+/* Dropdown único que agrupa todo o histórico (alterações, edições,
+   exclusões e comentários) — mantém a tela curta e só carrega visualmente
+   a lista quando o usuário abre. */
+.history-collapse {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.history-collapse-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  padding: 16px 18px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-collapse-trigger:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.history-collapse-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.history-collapse-count {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.history-collapse-caret {
+  color: var(--text-muted);
+  font-size: 12px;
+  flex-shrink: 0;
+  transition: transform 0.18s ease;
+}
+
+.history-collapse-caret[data-open="true"] {
+  transform: rotate(180deg);
+}
+
+.history-collapse-body {
+  border-top: 1px solid var(--border);
+  padding: 16px 18px 18px;
+}
+
+@media (max-width: 640px) {
+  .history-collapse-trigger {
+    padding: 14px;
+    font-size: 14px;
+  }
+
+  .history-collapse-body {
+    padding: 14px;
+  }
+}
+
 .history-search {
   position: relative;
   margin-bottom: 16px;
