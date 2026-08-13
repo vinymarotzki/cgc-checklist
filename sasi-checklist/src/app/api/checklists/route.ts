@@ -1,22 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, initDb } from "@/lib/db";
 import { authenticateToken } from "@/lib/auth";
+import { NO_ACCESS_MESSAGE, readSasiToken } from "@/lib/token";
 import { v4 as uuidv4 } from "uuid";
 
-function isLocalRequest(host: string | null) {
-  return !!host && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
-}
-
+// O token só é aceito em `sasi-token`; fora desse modelo, é usuário sem acesso.
 async function requireAuth(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get("sasi-token") || req.nextUrl.searchParams.get("token");
-  const host = req.headers.get("host") || req.nextUrl.host;
-  const local = isLocalRequest(host);
+  const token = readSasiToken(req.nextUrl.searchParams);
 
-  if (!token && !local) {
-    return { user: null, error: NextResponse.json({ error: "Token obrigatorio" }, { status: 401 }) };
+  if (!token) {
+    return { user: null, error: NextResponse.json({ error: NO_ACCESS_MESSAGE }, { status: 401 }) };
   }
 
-  const user = token ? await authenticateToken(token) : local ? { id: "local", name: "Local" } : null;
+  const user = await authenticateToken(token);
   if (!user) {
     return { user: null, error: NextResponse.json({ error: "Token invalido ou expirado" }, { status: 401 }) };
   }

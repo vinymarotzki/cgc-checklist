@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { TOKEN_PARAM, readSasiToken } from '@/lib/token';
 
 interface Activity {
   id: string;
@@ -34,7 +35,8 @@ function groupByCategory(activities: Activity[]) {
 
 function AdminPageContent() {
   const searchParams = useSearchParams();
-  const token = searchParams.get('sasi-token') || searchParams.get('token') || '';
+  // Token só é aceito em `sasi-token`; qualquer outra forma é usuário sem acesso.
+  const token = readSasiToken(searchParams);
   const checklistId = searchParams.get('checklist') || '';
   const [activities, setActivities] = useState<Activity[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -51,17 +53,16 @@ function AdminPageContent() {
   const [newCategoryDraft, setNewCategoryDraft] = useState('');
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const isLocalDev = typeof window !== 'undefined' && window.location.protocol === 'http:' && /^(localhost|127\.0\.0\.1|::1)$/.test(window.location.hostname);
 
   const buildQuery = useCallback(() => {
     const params = new URLSearchParams();
-    if (token) params.set('token', token);
+    if (token) params.set(TOKEN_PARAM, token);
     if (checklistId) params.set('checklist', checklistId);
     return params.toString() ? `?${params.toString()}` : '';
   }, [token, checklistId]);
 
   const fetchActivities = useCallback(async () => {
-    if (!token && !isLocalDev) {
+    if (!token) {
       setAuthError(true);
       setLoading(false);
       return;
@@ -83,7 +84,7 @@ function AdminPageContent() {
     } finally {
       setLoading(false);
     }
-  }, [token, isLocalDev, buildQuery]);
+  }, [token, buildQuery]);
 
   useEffect(() => {
     fetchActivities();

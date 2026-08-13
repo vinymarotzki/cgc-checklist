@@ -28,7 +28,9 @@ There is no test suite and no test runner configured.
 app; pointing it at the production database is done by swapping env vars, not by a flag.
 
 Local access always needs the token in the URL, e.g.
-`http://localhost:3000/?sasi-token=TOKEN` (see "Auth" — localhost has a bypass).
+`http://localhost:3000/?sasi-token=TOKEN`. There is **no** localhost bypass: local
+development also needs `AUTH_USER_ENDPOINT` set in `.env.local`, otherwise every
+token is rejected (see "Auth").
 
 ## Stack
 
@@ -61,21 +63,27 @@ the API token never reaches the browser.
 
 ### Auth
 
-Token arrives as `?sasi-token=` (or `?token=`) in the URL and must be propagated by
-hand into every internal link and every `fetch` — pages build a `buildQuery()`/
-`authQuery` string for this. Server side, `authenticateToken` (`src/lib/auth.ts`)
-validates it against `AUTH_USER_ENDPOINT`.
+`src/lib/token.ts` is the single source for reading the token out of the URL, on both
+client and server. One rule, no exceptions:
 
-`AUTH_USER_ENDPOINT` is typically absent from `.env.local`, which makes
-`authenticateToken` reject *every* token. Local development only works because of the
-localhost host bypass in `requireAuth`, which fabricates a `{ id: "local", name: "Local" }`
-user.
+- the token is read **only** from `?sasi-token=` (`TOKEN_PARAM`); the old `?token=`
+  fallback is gone;
+- an absent param, a different param name, or an empty/whitespace value all mean
+  "user without access" — `readSasiToken` returns `null` and the caller must refuse;
+- there is **no** host bypass. localhost follows the exact same rule as production, so
+  what is tested locally is what the end user gets.
+
+The token must still be propagated by hand into every internal link and every `fetch` —
+pages build their query with `sasiTokenQuery(token)` (or `params.set(TOKEN_PARAM, …)`).
+Server side, `authenticateToken` (`src/lib/auth.ts`) validates it against
+`AUTH_USER_ENDPOINT`; without that env var *every* token is rejected, in every
+environment.
 
 There are two implementations of `requireAuth`: `src/lib/api-auth.ts` (shared, also
 returns the raw token so it can be forwarded as Bearer to the SASI API) used by the
 CGC routes, and a private per-file copy inside the older checklist routes
-(`/api/activities`, `/api/checklists`, …). The duplication is deliberate — the CGC
-work did not touch the checklist routes.
+(`/api/activities`, `/api/checklists`, …). Both read the token through
+`readSasiToken`, so the rule above cannot drift between them.
 
 ### Database
 

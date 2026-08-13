@@ -42,10 +42,11 @@ const DEFAULT_TIMEOUT_MS = 15000;
  * A API sempre exige Bearer — não existe leitura anônima. O que muda por
  * ambiente é a origem do token:
  *
- * - Produção: vem do `sasi-token` da URL, para os dados saírem no escopo do
+ * - Padrão: vem do `sasi-token` da URL, para os dados saírem no escopo do
  *   usuário que abriu a tela.
- * - Localhost: não há token na URL, então cai em `SASI_API_TOKEN` do
- *   `.env.local`. É token de servidor e nunca chega ao browser.
+ * - Alternativa: quando o token da URL autentica o usuário mas não serve para a
+ *   API SASI, cai em `SASI_API_TOKEN` do `.env.local`. É token de servidor e
+ *   nunca chega ao browser.
  */
 export function resolveSasiToken(urlToken: string | null | undefined): string | null {
   const fromUrl = urlToken?.trim();

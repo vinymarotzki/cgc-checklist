@@ -1,10 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, initDb } from "@/lib/db";
 import { authenticateToken } from "@/lib/auth";
+import { NO_ACCESS_MESSAGE, readSasiToken } from "@/lib/token";
 import { v4 as uuidv4 } from "uuid";
 
-function isLocalRequest(host: string | null) {
-  return !!host && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
+// O token só é aceito em `sasi-token`; fora desse modelo, é usuário sem acesso.
+async function requireAuth(req: NextRequest) {
+  const token = readSasiToken(req.nextUrl.searchParams);
+
+  if (!token) {
+    return { user: null, error: NextResponse.json({ error: NO_ACCESS_MESSAGE }, { status: 401 }) };
+  }
+
+  const user = await authenticateToken(token);
+  if (!user) {
+    return { user: null, error: NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 }) };
+  }
+
+  return { user, error: null };
 }
 
 async function logObservationHistory(db: ReturnType<typeof getDb>, activityId: string, status: string, user: { id: string; name: string }, message: string) {
@@ -33,18 +46,9 @@ async function getActivityStatus(db: ReturnType<typeof getDb>, activityId: strin
 }
 
 export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get("sasi-token") || req.nextUrl.searchParams.get("token");
-  const host = req.headers.get("host") || req.nextUrl.host;
-  const local = isLocalRequest(host);
-
-  if (!token && !local) {
-    return NextResponse.json({ error: "Token obrigatório" }, { status: 401 });
-  }
-
-  const user = token ? await authenticateToken(token) : local ? { id: "local", name: "Local" } : null;
-  if (!user) {
-    return NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 });
-  }
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
+  const user = auth.user;
 
   await initDb();
   const db = getDb();
@@ -60,18 +64,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get("sasi-token") || req.nextUrl.searchParams.get("token");
-  const host = req.headers.get("host") || req.nextUrl.host;
-  const local = isLocalRequest(host);
-
-  if (!token && !local) {
-    return NextResponse.json({ error: "Token obrigatório" }, { status: 401 });
-  }
-
-  const user = token ? await authenticateToken(token) : local ? { id: "local", name: "Local" } : null;
-  if (!user) {
-    return NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 });
-  }
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
+  const user = auth.user;
 
   const body = await req.json();
   const { activity_id, text } = body;
@@ -113,18 +108,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get("sasi-token") || req.nextUrl.searchParams.get("token");
-  const host = req.headers.get("host") || req.nextUrl.host;
-  const local = isLocalRequest(host);
-
-  if (!token && !local) {
-    return NextResponse.json({ error: "Token obrigatório" }, { status: 401 });
-  }
-
-  const user = token ? await authenticateToken(token) : local ? { id: "local", name: "Local" } : null;
-  if (!user) {
-    return NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 });
-  }
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
+  const user = auth.user;
 
   const body = await req.json();
   const { id, text } = body;
@@ -162,18 +148,9 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get("sasi-token") || req.nextUrl.searchParams.get("token");
-  const host = req.headers.get("host") || req.nextUrl.host;
-  const local = isLocalRequest(host);
-
-  if (!token && !local) {
-    return NextResponse.json({ error: "Token obrigatório" }, { status: 401 });
-  }
-
-  const user = token ? await authenticateToken(token) : local ? { id: "local", name: "Local" } : null;
-  if (!user) {
-    return NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 });
-  }
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
+  const user = auth.user;
 
   const body = await req.json();
   const { id } = body;

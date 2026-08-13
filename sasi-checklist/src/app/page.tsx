@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { TOKEN_PARAM, readSasiToken, sasiTokenQuery } from "@/lib/token";
 import Link from "next/link";
 import { Suspense } from "react";
 import {
@@ -52,7 +53,9 @@ function getCategoryStats(activities: Activity[]) {
 
 function ChecklistPage() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("sasi-token") || searchParams.get("token") || "";
+  // Token só é aceito em `sasi-token`; qualquer outra forma é usuário sem acesso.
+  const token = readSasiToken(searchParams);
+  const authQuery = sasiTokenQuery(token);
   const checklistId = searchParams.get("checklist") || "";
 
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -66,20 +69,15 @@ function ChecklistPage() {
   const [obsValue, setObsValue] = useState("");
   const [filter, setFilter] = useState("TODOS");
   const [searchTerm, setSearchTerm] = useState("");
-  const isLocalDev =
-    typeof window !== "undefined" &&
-    window.location.protocol === "http:" &&
-    /^(localhost|127\.0\.0\.1|::1)$/.test(window.location.hostname);
 
   const fetchActivities = useCallback(async () => {
-    if (!token && !isLocalDev) {
+    if (!token) {
       setAuthError(true);
       setLoading(false);
       return;
     }
     try {
       if (!checklistId) {
-        const authQuery = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
         const authRes = await fetch(`/api/checklists${authQuery}`);
         if (!authRes.ok) {
           setAuthError(true);
@@ -94,7 +92,7 @@ function ChecklistPage() {
       }
 
       const params = new URLSearchParams();
-      if (token) params.set("sasi-token", token);
+      params.set(TOKEN_PARAM, token);
       params.set("checklist", checklistId);
       const query = `?${params.toString()}`;
       const res = await fetch(`/api/activities${query}`);
@@ -111,20 +109,19 @@ function ChecklistPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, isLocalDev, checklistId]);
+  }, [token, authQuery, checklistId]);
 
   const fetchObservations = useCallback(async () => {
-    if ((!token && !isLocalDev) || !checklistId) return;
+    if (!token || !checklistId) return;
     try {
-      const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
-      const res = await fetch(`/api/observations${query}`);
+      const res = await fetch(`/api/observations${authQuery}`);
       if (!res.ok) return;
       const data = await res.json();
       setObservations(data.observations || []);
     } catch {
       // ignore
     }
-  }, [token, isLocalDev, checklistId]);
+  }, [token, authQuery, checklistId]);
 
   useEffect(() => {
     fetchActivities();
@@ -135,7 +132,7 @@ function ChecklistPage() {
     setSaving(id);
     try {
       const params = new URLSearchParams();
-      if (token) params.set("sasi-token", token);
+      if (token) params.set(TOKEN_PARAM, token);
       if (checklistId) params.set("checklist", checklistId);
       const query = params.toString() ? `?${params.toString()}` : "";
       await fetch(`/api/activities${query}`, {
@@ -158,7 +155,7 @@ function ChecklistPage() {
       return;
     }
 
-    const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
+    const query = authQuery;
     const payload = { text: obsValue.trim() };
 
     if (editingNoteId) {
@@ -187,7 +184,7 @@ function ChecklistPage() {
   }
 
   async function deleteObs(id: string) {
-    const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
+    const query = authQuery;
     const res = await fetch(`/api/observations${query}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -268,7 +265,7 @@ function ChecklistPage() {
   }
 
   if (!checklistId) {
-    const checklistsHref = token ? `/checklists?sasi-token=${encodeURIComponent(token)}` : "/checklists";
+    const checklistsHref = `/checklists${authQuery}`;
     return (
       <div style={{ background: "#0F1117", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
         <div style={{
@@ -311,7 +308,7 @@ function ChecklistPage() {
           <div />
           <div className="app-nav">
             <Link
-              href={isLocalDev ? "/history" : `/history?sasi-token=${encodeURIComponent(token)}`}
+              href={`/history${authQuery}`}
               style={{
                 color: "#7A82A0", fontSize: 13, textDecoration: "none",
                 display: "flex", alignItems: "center", gap: 6,
@@ -322,7 +319,7 @@ function ChecklistPage() {
               📋 Histórico
             </Link>
             <Link
-              href={isLocalDev ? "/checklists" : `/checklists?sasi-token=${encodeURIComponent(token)}`}
+              href={`/checklists${authQuery}`}
               style={{
                 color: "#7A82A0", fontSize: 13, textDecoration: "none",
                 display: "flex", alignItems: "center", gap: 6,
@@ -333,7 +330,7 @@ function ChecklistPage() {
               Checklists
             </Link>
             <Link
-              href={isLocalDev ? "/atividades-cgc" : `/atividades-cgc?sasi-token=${encodeURIComponent(token)}`}
+              href={`/atividades-cgc${authQuery}`}
               style={{
                 color: "#7A82A0", fontSize: 13, textDecoration: "none",
                 display: "flex", alignItems: "center", gap: 6,

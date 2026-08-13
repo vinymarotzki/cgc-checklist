@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { TOKEN_PARAM, readSasiToken, sasiTokenQuery } from "@/lib/token";
 import {
   STATUS_OPTIONS,
   getCategoryColor,
@@ -159,12 +160,9 @@ function getStats(activities: CgcActivity[]) {
 
 function AtividadesCgcPage() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("sasi-token") || searchParams.get("token") || "";
+  // Token só é aceito em `sasi-token`; qualquer outra forma é usuário sem acesso.
+  const token = readSasiToken(searchParams);
   const groupId = searchParams.get("grupo") || "";
-  const isLocalDev =
-    typeof window !== "undefined" &&
-    window.location.protocol === "http:" &&
-    /^(localhost|127\.0\.0\.1|::1)$/.test(window.location.hostname);
 
   const [user, setUser] = useState<User | null>(null);
   const [groups, setGroups] = useState<GroupWithProgress[]>([]);
@@ -201,15 +199,12 @@ function AtividadesCgcPage() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [obsValue, setObsValue] = useState("");
 
-  const query = useMemo(
-    () => (token ? `?sasi-token=${encodeURIComponent(token)}` : ""),
-    [token]
-  );
+  const query = useMemo(() => sasiTokenQuery(token), [token]);
 
   const hrefWithToken = useCallback(
     (path: string, extra?: Record<string, string>) => {
       const params = new URLSearchParams();
-      if (token) params.set("sasi-token", token);
+      if (token) params.set(TOKEN_PARAM, token);
       for (const [key, value] of Object.entries(extra || {})) params.set(key, value);
       const qs = params.toString();
       return qs ? `${path}?${qs}` : path;
@@ -218,7 +213,7 @@ function AtividadesCgcPage() {
   );
 
   const fetchGroups = useCallback(async () => {
-    if (!token && !isLocalDev) {
+    if (!token) {
       setAuthError(true);
       return;
     }
@@ -238,7 +233,7 @@ function AtividadesCgcPage() {
     } catch {
       setApiError("Falha de conexão ao carregar os grupos.");
     }
-  }, [isLocalDev, query, token]);
+  }, [query, token]);
 
   const fetchActivities = useCallback(
     async (options: { showIndicator?: boolean } = {}) => {
@@ -254,7 +249,7 @@ function AtividadesCgcPage() {
 
       try {
         const params = new URLSearchParams();
-        if (token) params.set("sasi-token", token);
+        if (token) params.set(TOKEN_PARAM, token);
         params.set("group", groupId);
         params.set("page", String(page));
         params.set("limit", String(PAGE_SIZE));
@@ -301,7 +296,7 @@ function AtividadesCgcPage() {
   );
 
   const fetchObservations = useCallback(async () => {
-    if ((!token && !isLocalDev) || !groupId) return;
+    if (!token || !groupId) return;
     try {
       const res = await fetch(`/api/cgc/observations${query}`);
       if (!res.ok) return;
@@ -310,7 +305,7 @@ function AtividadesCgcPage() {
     } catch {
       // Comentário é acessório: falhar aqui não pode derrubar a listagem.
     }
-  }, [groupId, isLocalDev, query, token]);
+  }, [groupId, query, token]);
 
   useEffect(() => {
     let active = true;

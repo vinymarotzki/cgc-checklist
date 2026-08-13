@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { readSasiToken, sasiTokenQuery } from "@/lib/token";
 import { STATUS_LABELS, getStatusColor, getStatusPillStyle } from "@/lib/checklist-status";
 
 interface CgcHistoryEntry {
@@ -128,11 +129,8 @@ function formatDate(iso: string) {
 
 function CgcHistoryPage() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("sasi-token") || searchParams.get("token") || "";
-  const isLocalDev =
-    typeof window !== "undefined" &&
-    window.location.protocol === "http:" &&
-    /^(localhost|127\.0\.0\.1|::1)$/.test(window.location.hostname);
+  // Token só é aceito em `sasi-token`; qualquer outra forma é usuário sem acesso.
+  const token = readSasiToken(searchParams);
 
   const [history, setHistory] = useState<CgcHistoryEntry[]>([]);
   const [groups, setGroups] = useState<GroupSummary[]>([]);
@@ -144,17 +142,12 @@ function CgcHistoryPage() {
   // aconteceu com ela (status alterado, comentário criado/editado/apagado).
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
 
-  const query = useMemo(
-    () => (token ? `?sasi-token=${encodeURIComponent(token)}` : ""),
-    [token]
-  );
+  const query = useMemo(() => sasiTokenQuery(token), [token]);
 
-  const backHref = token
-    ? `/atividades-cgc?sasi-token=${encodeURIComponent(token)}`
-    : "/atividades-cgc";
+  const backHref = `/atividades-cgc${query}`;
 
   const fetchHistory = useCallback(async () => {
-    if (!token && !isLocalDev) {
+    if (!token) {
       setAuthError(true);
       setLoading(false);
       return;
@@ -175,7 +168,7 @@ function CgcHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [isLocalDev, query, token]);
+  }, [query, token]);
 
   useEffect(() => {
     fetchHistory();

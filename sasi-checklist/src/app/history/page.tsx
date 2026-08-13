@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { readSasiToken, sasiTokenQuery } from "@/lib/token";
 import Link from "next/link";
 import { Suspense } from "react";
 import * as XLSX from "xlsx";
@@ -238,7 +239,9 @@ function exportChecklistXlsx(checklist: CompletedChecklistEntry, items: Complete
 
 function HistoryPage() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("sasi-token") || searchParams.get("token") || "";
+  // Token só é aceito em `sasi-token`; qualquer outra forma é usuário sem acesso.
+  const token = readSasiToken(searchParams);
+  const authQuery = sasiTokenQuery(token);
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [completedChecklists, setCompletedChecklists] = useState<CompletedChecklistEntry[]>([]);
@@ -254,16 +257,11 @@ function HistoryPage() {
   // Cada atividade é um dropdown fechado por padrão; abrir revela tudo que
   // aconteceu com ela (status alterado, observação criada/editada/apagada).
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
-  const isLocalDev =
-    typeof window !== "undefined" &&
-    window.location.protocol === "http:" &&
-    /^(localhost|127\.0\.0\.1|::1)$/.test(window.location.hostname);
 
   const fetchHistory = useCallback(async () => {
-    if (!token && !isLocalDev) { setAuthError(true); setLoading(false); return; }
+    if (!token) { setAuthError(true); setLoading(false); return; }
     try {
-      const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
-      const res = await fetch(`/api/history${query}`);
+      const res = await fetch(`/api/history${authQuery}`);
       if (!res.ok) { setAuthError(true); setLoading(false); return; }
       const data = await res.json();
       setHistory(data.history);
@@ -278,21 +276,19 @@ function HistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, isLocalDev, selectedChecklistId]);
+  }, [token, authQuery, selectedChecklistId]);
 
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
 
   useEffect(() => {
-    if (!selectedChecklistId || (!token && !isLocalDev)) return;
+    if (!selectedChecklistId || !token) return;
 
     const fetchChecklistItems = async () => {
       setFetchingItems(true);
       try {
-        const query = token
-          ? `?sasi-token=${encodeURIComponent(token)}&checklist_id=${encodeURIComponent(selectedChecklistId)}`
-          : `?checklist_id=${encodeURIComponent(selectedChecklistId)}`;
+        const query = `${authQuery}&checklist_id=${encodeURIComponent(selectedChecklistId)}`;
         console.log("Enviando request de checklist detalhado para /api/history", query);
         const res = await fetch(`/api/history${query}`);
         console.log("Response status from /api/history:", res.status);
@@ -313,7 +309,7 @@ function HistoryPage() {
     };
 
     fetchChecklistItems();
-  }, [selectedChecklistId, token, isLocalDev]);
+  }, [selectedChecklistId, token, authQuery]);
 
   const handleExport = () => {
     console.log("Botão clicado");
@@ -415,7 +411,7 @@ function HistoryPage() {
         <div className="history-header-inner">
           <div className="history-header-left">
             <Link
-              href={isLocalDev ? "/" : `/?sasi-token=${encodeURIComponent(token)}`}
+              href={`/${authQuery}`}
               className="history-back-link"
             >
               ← Checklist

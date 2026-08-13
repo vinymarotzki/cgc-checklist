@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, initDb } from "@/lib/db";
 import { authenticateToken } from "@/lib/auth";
-
-function isLocalRequest(host: string | null) {
-  return !!host && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
-}
+import { NO_ACCESS_MESSAGE, readSasiToken } from "@/lib/token";
 
 export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get("sasi-token") || req.nextUrl.searchParams.get("token");
-  const host = req.headers.get("host") || req.nextUrl.host;
-  const local = isLocalRequest(host);
+  // O token só é aceito em `sasi-token`; fora desse modelo, é usuário sem acesso.
+  const token = readSasiToken(req.nextUrl.searchParams);
 
-  if (!token && !local) {
-    return NextResponse.json({ error: "Token obrigatório" }, { status: 401 });
+  if (!token) {
+    return NextResponse.json({ error: NO_ACCESS_MESSAGE }, { status: 401 });
   }
 
-  const user = token ? await authenticateToken(token) : local ? { id: "local", name: "Local" } : null;
+  const user = await authenticateToken(token);
   if (!user) {
     return NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 });
   }

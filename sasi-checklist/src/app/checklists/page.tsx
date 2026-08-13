@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { readSasiToken, sasiTokenQuery } from "@/lib/token";
 import * as XLSX from "xlsx";
 
 interface ChecklistSummary {
@@ -143,11 +144,8 @@ function parseCsvRows(text: string) {
 
 function ChecklistsPage() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("sasi-token") || searchParams.get("token") || "";
-  const isLocalDev =
-    typeof window !== "undefined" &&
-    window.location.protocol === "http:" &&
-    /^(localhost|127\.0\.0\.1|::1)$/.test(window.location.hostname);
+  // Token só é aceito em `sasi-token`; qualquer outra forma é usuário sem acesso.
+  const token = readSasiToken(searchParams);
 
   const [checklists, setChecklists] = useState<ChecklistSummary[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -171,14 +169,12 @@ function ChecklistsPage() {
   const [selectedResponsibleColumn, setSelectedResponsibleColumn] = useState<number | null>(null);
   const [selectedObservationColumn, setSelectedObservationColumn] = useState<number | null>(null);
 
-  const query = useMemo(() => {
-    return token ? `?sasi-token=${encodeURIComponent(token)}` : "";
-  }, [token]);
+  const query = useMemo(() => sasiTokenQuery(token), [token]);
 
-  const listHref = token ? `/checklists?sasi-token=${encodeURIComponent(token)}` : "/checklists";
+  const listHref = `/checklists${query}`;
 
   const fetchChecklists = useCallback(async () => {
-    if (!token && !isLocalDev) {
+    if (!token) {
       setAuthError(true);
       setLoading(false);
       return;
@@ -198,7 +194,7 @@ function ChecklistsPage() {
     } finally {
       setLoading(false);
     }
-  }, [isLocalDev, query, token]);
+  }, [query, token]);
 
   useEffect(() => {
     fetchChecklists();
@@ -441,7 +437,7 @@ function ChecklistsPage() {
                 </div>
                 <div className="card-actions">
                   <Link
-                    href={token ? `/?sasi-token=${encodeURIComponent(token)}&checklist=${encodeURIComponent(checklist.id)}` : `/?checklist=${encodeURIComponent(checklist.id)}`}
+                    href={token ? `/${query}&checklist=${encodeURIComponent(checklist.id)}` : `/?checklist=${encodeURIComponent(checklist.id)}`}
                     style={{ background: "#1E2333", border: "1px solid #3B6EF5", color: "#E8EAF0", borderRadius: 8, padding: "9px 14px", textDecoration: "none", fontSize: 13, fontWeight: 700 }}
                   >
                     Abrir

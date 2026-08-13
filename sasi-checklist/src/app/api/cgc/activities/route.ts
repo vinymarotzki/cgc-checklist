@@ -113,14 +113,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Selecione um grupo para listar as atividades." }, { status: 400 });
   }
 
-  // Em produção o token vem da URL; em localhost, de SASI_API_TOKEN.
+  // `requireAuth` já garantiu o token da URL; SASI_API_TOKEN continua como
+  // alternativa de servidor para ambientes que usam token próprio.
   const sasiToken = resolveSasiToken(auth.token);
   if (!sasiToken) {
     return NextResponse.json(
       {
-        error: auth.isLocal
-          ? "Defina SASI_API_TOKEN no .env.local para ler as atividades da API SASI em desenvolvimento."
-          : "Token da API SASI não informado. Acesse com ?sasi-token=SEU_TOKEN para consultar as atividades do CGC.",
+        error: "Token da API SASI não informado. Acesse com ?sasi-token=SEU_TOKEN para consultar as atividades do CGC.",
         kind: "auth",
       },
       { status: 401 }
