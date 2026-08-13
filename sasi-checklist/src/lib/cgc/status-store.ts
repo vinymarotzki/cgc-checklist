@@ -105,6 +105,39 @@ export async function backfillGroup(messageIds: string[], groupId: string): Prom
   }
 }
 
+/**
+ * Total de atividades acompanhadas e quantas estão concluídas, por grupo —
+ * para os cards da tela de seleção mostrarem o andamento de cada um.
+ *
+ * "Total" é o que já passou por `backfillGroup` (toda atividade que a
+ * listagem do grupo já carregou pelo menos uma vez), não o total real na API
+ * SASI: contar isso ao vivo exigiria varrer o provider para cada grupo só
+ * para montar esta tela, o que a arquitetura evita (ver `SASI_CGC_SCAN_CAP`
+ * em `/api/cgc/activities`).
+ */
+export async function getGroupCounts(): Promise<Record<string, { total: number; concluded: number }>> {
+  await initDb();
+  const db = getDb();
+  const result = await db.execute({
+    sql: `SELECT group_id, COUNT(*) AS total,
+                 SUM(CASE WHEN status = 'CONCLUIDO' THEN 1 ELSE 0 END) AS concluded
+          FROM cgc_activity_status
+          WHERE group_id IS NOT NULL
+          GROUP BY group_id`,
+    args: [],
+  });
+
+  const counts: Record<string, { total: number; concluded: number }> = {};
+  for (const row of result.rows) {
+    const record = row as unknown as Record<string, unknown>;
+    counts[String(record.group_id)] = {
+      total: Number(record.total || 0),
+      concluded: Number(record.concluded || 0),
+    };
+  }
+  return counts;
+}
+
 /** Quantidade de atividades concluídas por grupo, para os cards da tela inicial. */
 export async function getConcludedCountByGroup(): Promise<Record<string, number>> {
   await initDb();

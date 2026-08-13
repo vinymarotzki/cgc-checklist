@@ -227,4 +227,16 @@ export async function initDb() {
   await db.execute(
     `CREATE INDEX IF NOT EXISTS idx_cgc_observations_message ON cgc_observations (message_id)`
   );
+
+  // Total "solicitado" por grupo, sincronizado da API SASI (ver group-totals.ts).
+  // `last_message_id` é a marca d'água: só mensagens mais novas que ela entram
+  // na próxima sincronização, em vez de escanear o canal inteiro de novo.
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS cgc_group_totals (
+      group_id TEXT PRIMARY KEY,
+      total INTEGER NOT NULL DEFAULT 0,
+      last_message_id INTEGER,
+      updated_at TEXT NOT NULL
+    )
+  `);
 }

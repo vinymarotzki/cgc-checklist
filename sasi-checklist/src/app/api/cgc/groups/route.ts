@@ -15,7 +15,8 @@ import {
   updateGroup,
   type CgcGroupInput,
 } from "@/lib/cgc/groups";
-import { getConcludedCountByGroup } from "@/lib/cgc/status-store";
+import { getGroupCounts } from "@/lib/cgc/status-store";
+import { getLiveGroupTotals } from "@/lib/cgc/group-totals";
 
 function parseGroupInput(body: unknown): CgcGroupInput | null {
   if (typeof body !== "object" || body === null) return null;
@@ -43,15 +44,22 @@ export async function GET(req: NextRequest) {
   if (auth.error) return auth.error;
 
   try {
-    const [groups, concluded] = await Promise.all([
-      listGroups(),
+    const groups = await listGroups();
+    const [counts, liveTotals] = await Promise.all([
       // Contagem local: não custa chamada à API SASI, então os cards podem
-      // mostrar o andamento sem esperar por rede externa.
-      getConcludedCountByGroup().catch(() => ({} as Record<string, number>)),
+      // mostrar o "concluído" sem esperar por rede externa.
+      getGroupCounts().catch(() => ({} as Record<string, { total: number; concluded: number }>)),
+      // Total "solicitado" ao vivo (cacheado — ver group-totals.ts). Cai pro
+      // total local se a API SASI falhar ou não tiver token disponível.
+      getLiveGroupTotals(groups, auth.token).catch(() => ({} as Record<string, number>)),
     ]);
 
     return NextResponse.json({
-      groups: groups.map((group) => ({ ...group, concluded: concluded[group.id] ?? 0 })),
+      groups: groups.map((group) => ({
+        ...group,
+        total: liveTotals[group.id] ?? counts[group.id]?.total ?? 0,
+        concluded: counts[group.id]?.concluded ?? 0,
+      })),
       user: auth.user,
     });
   } catch {
