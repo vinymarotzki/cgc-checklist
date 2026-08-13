@@ -4,20 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository layout
 
-The application lives entirely in `sasi-checklist/` — the only directory with
-`package.json`, `node_modules` and `.env.local`. The repository root holds just
-`CLAUDE.md`, `README.md` and the git config files.
-
-A duplicated copy of `src/` used to sit at the root, along with its own
-`next.config.ts`, `postcss.config.js`, `tailwind.config.ts` and `package-lock.json`.
-It was residue from an older layout and has been deleted; do not recreate it.
-
-**All commands below must run from `sasi-checklist/`.**
+The application lives at the repository root — `package.json`, `src/`, `.env.local`
+and every config file sit directly under the repo root, no subdirectory. This used to
+be split (app nested in `sasi-checklist/`, a stale duplicate of `src/` at the root); both
+were consolidated into a single root-level app. Do not recreate a nested copy.
 
 ## Commands
 
 ```bash
-cd sasi-checklist
 npm install
 npm run dev        # next dev
 npm run build      # next build
@@ -42,9 +36,8 @@ Next.js 16 (App Router) + React 19 + TypeScript strict, Tailwind 3, Turso/libSQL
 (`@libsql/client`), `xlsx` for spreadsheet export, deployed on Vercel. Path alias
 `@/*` maps to `src/*`.
 
-The config is `sasi-checklist/next.config.js` (CommonJS). It sets
-`outputFileTracingRoot: __dirname`, which dates from the duplicated tree described
-above — it kept Next's file tracing from wandering into the root copy.
+The config is `next.config.js` (CommonJS), currently empty besides the export — no
+special tracing/root override needed now that there is a single copy of the app.
 
 ## Architecture
 
