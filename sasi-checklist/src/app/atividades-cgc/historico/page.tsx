@@ -73,37 +73,46 @@ interface CgcActivityGroup {
   currentStatus: string | null;
 }
 
+/** Primeiro valor não vazio do campo entre os eventos, do mais recente ao mais antigo. */
+function pickLatest(
+  entries: CgcHistoryEntry[],
+  field: "description" | "group_name" | "priority" | "deadline"
+): string | null {
+  return entries.find((entry) => entry[field])?.[field] ?? null;
+}
+
 /**
  * Agrupa o histórico por atividade (mensagem do SASI) para que cada dropdown
  * seja uma atividade. listHistory devolve created_at DESC, então a primeira
- * entrada de cada grupo já é a mais recente — e é dela que saem prioridade e
- * prazo, que ficam denormalizados em cgc_history e podem mudar entre eventos.
+ * entrada de cada grupo já é a mais recente.
+ *
+ * Título, grupo, prioridade e prazo saem do evento mais recente que os tenha,
+ * e não do primeiro: são denormalizados em cgc_history a partir do snapshot que
+ * a tela envia, e eventos gravados sem snapshot (comentários apagados antes da
+ * correção) têm esses campos nulos — herdá-los evita cair no id da mensagem.
  */
 function groupByActivity(entries: CgcHistoryEntry[]): CgcActivityGroup[] {
-  const groups = new Map<string, CgcActivityGroup>();
+  const groups = new Map<string, CgcHistoryEntry[]>();
 
   entries.forEach((entry) => {
     const existing = groups.get(entry.message_id);
     if (existing) {
-      existing.entries.push(entry);
+      existing.push(entry);
       return;
     }
-    groups.set(entry.message_id, {
-      messageId: entry.message_id,
-      title: entry.description || `Atividade ${entry.message_id}`,
-      groupName: entry.group_name || "—",
-      priority: entry.priority,
-      deadline: entry.deadline,
-      entries: [entry],
-      lastAt: entry.created_at,
-      currentStatus: null,
-    });
+    groups.set(entry.message_id, [entry]);
   });
 
-  return Array.from(groups.values()).map((group) => ({
-    ...group,
+  return Array.from(groups.entries()).map(([messageId, groupEntries]) => ({
+    messageId,
+    title: pickLatest(groupEntries, "description") || `Atividade ${messageId}`,
+    groupName: pickLatest(groupEntries, "group_name") || "—",
+    priority: pickLatest(groupEntries, "priority"),
+    deadline: pickLatest(groupEntries, "deadline"),
+    entries: groupEntries,
+    lastAt: groupEntries[0].created_at,
     currentStatus:
-      group.entries.find((entry) => entry.new_status && entry.new_status !== "SEM_STATUS")
+      groupEntries.find((entry) => entry.new_status && entry.new_status !== "SEM_STATUS")
         ?.new_status ?? null,
   }));
 }

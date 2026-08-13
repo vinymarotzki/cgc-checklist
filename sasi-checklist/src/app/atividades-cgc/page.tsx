@@ -366,7 +366,13 @@ function AtividadesCgcPage() {
       return;
     }
 
-    const payload = { text: obsValue.trim() };
+    // O comentário também entra no histórico, que precisa do retrato da
+    // atividade — sem ele a tela de histórico só teria o id da mensagem.
+    const snapshot = activitySnapshot(
+      activities.find((item) => item.id === activeActivityId),
+      groupId
+    );
+    const payload = { text: obsValue.trim(), ...snapshot };
 
     try {
       if (editingNoteId) {
@@ -397,11 +403,17 @@ function AtividadesCgcPage() {
   }
 
   async function deleteObs(id: string) {
+    const note = observations.find((item) => item.id === id);
+    const snapshot = activitySnapshot(
+      activities.find((item) => item.id === (note?.message_id ?? activeActivityId)),
+      groupId
+    );
+
     try {
       const res = await fetch(`/api/cgc/observations${query}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id, ...snapshot }),
       });
       if (!res.ok) return;
       setObservations((prev) => prev.filter((note) => note.id !== id));

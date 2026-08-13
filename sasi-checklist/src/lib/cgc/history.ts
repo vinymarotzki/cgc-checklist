@@ -49,6 +49,29 @@ function nullable(value: unknown): string | null {
 }
 
 /**
+ * Último retrato gravado para a mensagem.
+ *
+ * A descrição vem do campo `descreva` do formulário e só chega até aqui pelo
+ * snapshot que a tela envia. Quando uma chamada não o envia, reaproveitar o
+ * último conhecido evita gravar uma linha que a tela de histórico só saberia
+ * identificar pelo id da mensagem.
+ */
+async function getLatestSnapshot(messageId: string): Promise<CgcActivitySnapshot | null> {
+  const db = getDb();
+  const result = await db.execute({
+    sql: `SELECT group_id, group_name, description, priority, deadline
+            FROM cgc_history
+           WHERE message_id = ? AND description IS NOT NULL
+           ORDER BY created_at DESC
+           LIMIT 1`,
+    args: [messageId],
+  });
+
+  const row = result.rows[0] as unknown as CgcActivitySnapshot | undefined;
+  return row ?? null;
+}
+
+/**
  * Registra uma alteração. Nunca lança: histórico é registro secundário e não
  * pode impedir que a troca de status ou o comentário sejam salvos.
  */
@@ -56,6 +79,17 @@ export async function recordHistory(input: RecordHistoryInput): Promise<void> {
   try {
     await initDb();
     const db = getDb();
+
+    const previous = nullable(input.description)
+      ? null
+      : await getLatestSnapshot(input.message_id).catch(() => null);
+    const snapshot: CgcActivitySnapshot = {
+      group_id: nullable(input.group_id) ?? nullable(previous?.group_id),
+      group_name: nullable(input.group_name) ?? nullable(previous?.group_name),
+      description: nullable(input.description) ?? nullable(previous?.description),
+      priority: nullable(input.priority) ?? nullable(previous?.priority),
+      deadline: nullable(input.deadline) ?? nullable(previous?.deadline),
+    };
 
     await db.execute({
       sql: `INSERT INTO cgc_history
@@ -65,11 +99,11 @@ export async function recordHistory(input: RecordHistoryInput): Promise<void> {
       args: [
         uuidv4(),
         input.message_id,
-        nullable(input.group_id),
-        nullable(input.group_name),
-        nullable(input.description),
-        nullable(input.priority),
-        nullable(input.deadline),
+        snapshot.group_id ?? null,
+        snapshot.group_name ?? null,
+        snapshot.description ?? null,
+        snapshot.priority ?? null,
+        snapshot.deadline ?? null,
         nullable(input.old_status),
         nullable(input.new_status),
         nullable(input.observation),
