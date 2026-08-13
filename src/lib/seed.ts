@@ -222,7 +222,7 @@ const ACTIVITIES = [
   },
   {
     category: "7. Debriefing e Avaliação",
-    activity: "Elaborar relatório do simulado por meio do aplicativo SASI durante o debriefing.",
+    activity: "Elaborar relatório do simulado durante o debriefing.",
   },
   {
     category: "7. Debriefing e Avaliação",

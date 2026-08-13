@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, initDb } from "@/lib/db";
-import { authenticateToken } from "@/lib/sasi";
+import { authenticateToken } from "@/lib/auth";
 import { v4 as uuidv4 } from "uuid";
 
 function isLocalRequest(host: string | null) {

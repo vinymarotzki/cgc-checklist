@@ -290,6 +290,197 @@ select option {
   font-weight: 700;
 }
 
+/* Histórico agrupado por atividade: cada atividade vira um dropdown cujo
+   título é o nome da atividade, e tudo que aconteceu com ela (mudança de
+   status, comentário criado, editado ou apagado) aparece ao abrir. */
+.history-groups-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.history-groups-summary {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.history-toolbar-button {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.history-toolbar-button:hover {
+  color: var(--text);
+  border-color: var(--accent-dim);
+}
+
+.history-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-group {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.history-group[data-open="true"] {
+  border-color: var(--accent-dim);
+}
+
+.history-group-trigger {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  background: transparent;
+  border: none;
+  padding: 14px 16px;
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-group-trigger:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.history-group-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.history-group-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.history-group-title {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.history-group-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.history-group-caret {
+  color: var(--text-muted);
+  font-size: 12px;
+  flex-shrink: 0;
+  margin-top: 4px;
+  transition: transform 0.18s ease;
+}
+
+.history-group-caret[data-open="true"] {
+  transform: rotate(180deg);
+}
+
+.history-events {
+  list-style: none;
+  margin: 0;
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.history-event {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.history-event-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.history-event-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.history-event-time {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.history-event-comment {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--surface);
+  border-left: 3px solid var(--accent-dim);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.history-event-user {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.history-event-user strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .history-group-trigger {
+    padding: 12px 14px;
+  }
+
+  .history-events {
+    padding: 12px;
+  }
+
+  .history-event-head {
+    gap: 6px;
+  }
+}
+
 .history-search {
   position: relative;
   margin-bottom: 16px;
@@ -360,8 +551,10 @@ select option {
 }
 
 .history-category-badge {
-  font-size: 10px;
-  color: var(--muted);
+  /* --muted (#4A5270) sobre o fundo escuro fica quase ilegível; --text-muted
+     mantém o tom secundário com contraste suficiente. */
+  font-size: 11px;
+  color: var(--text-muted);
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -385,10 +578,11 @@ select option {
 }
 
 .history-status-pill {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 20px;
+  white-space: nowrap;
 }
 
 .history-observation-badge {
@@ -552,5 +746,125 @@ select option {
   .history-export-button {
     width: 100%;
     max-width: 220px;
+  }
+}
+
+/* ==========================================================================
+   Utilitários responsivos compartilhados.
+   Estilo inline não aceita media query, então os pontos onde o layout precisa
+   mudar de forma no mobile ficam aqui — mesmo padrão já usado pelas .history-*.
+   ========================================================================== */
+
+/* Cabeçalho fixo das telas. Vira coluna quando não cabe. */
+.app-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.app-header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Linha "conteúdo + ações" que empilha no mobile. */
+.split-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 18px;
+  align-items: center;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Duas colunas que viram uma só quando a tela aperta. */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Par rótulo/valor dos campos da atividade. */
+.field-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 160px) 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+
+/* Linha de pré-visualização da importação de planilha. */
+.import-row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+/* Evita que texto longo sem espaço estoure a largura da tela. */
+.split-card > *,
+.app-header-inner > * {
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 14px;
+  }
+
+  .split-card {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .card-actions > * {
+    flex: 1 1 auto;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .two-col,
+  .field-row,
+  .import-row {
+    grid-template-columns: 1fr;
+  }
+
+  .field-row {
+    gap: 2px;
+  }
+
+  .import-row {
+    gap: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-nav {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
   }
 }

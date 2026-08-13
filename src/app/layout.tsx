@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SASI – Checklist de Simulados",
+  title: "Checklist de Simulados",
   description: "Sistema de Acompanhamento de Simulados Institucionais",
 };
 

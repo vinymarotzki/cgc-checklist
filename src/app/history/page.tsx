@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 import * as XLSX from "xlsx";
+import { STATUS_LABELS, getStatusColor, getStatusPillStyle } from "@/lib/checklist-status";
 
 interface HistoryEntry {
   id: string;
@@ -45,31 +46,76 @@ interface User {
   name: string;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  SEM_STATUS: "Sem Status",
-  NAO_INICIADO: "Não Iniciado",
-  EM_ANDAMENTO: "Em Andamento",
-  CONCLUIDO: "Concluído",
-  IMPEDIDO: "Impedido",
-};
-
-const STATUS_COLOR: Record<string, string> = {
-  SEM_STATUS: "#7A82A0",
-  NAO_INICIADO: "#b10202",
-  EM_ANDAMENTO: "#ffe5a0",
-  CONCLUIDO: "#11734b",
-  IMPEDIDO: "#b10202",
-};
-
 const OBSERVATION_EVENT_PREFIXES = [
-  { prefix: "Observação adicionada:", label: "Observação criada", color: "#60A5FA" },
-  { prefix: "Observação editada:", label: "Observação editada", color: "#F59E0B" },
-  { prefix: "Observação apagada:", label: "Observação apagada", color: "#F87171" },
+  { prefix: "Observação adicionada:", label: "Observação criada", color: "#60A5FA", icon: "💬" },
+  { prefix: "Observação editada:", label: "Observação editada", color: "#F59E0B", icon: "✏️" },
+  { prefix: "Observação apagada:", label: "Observação apagada", color: "#F87171", icon: "🗑️" },
 ];
 
 function getObservationEvent(observation: string | null) {
   if (!observation) return null;
   return OBSERVATION_EVENT_PREFIXES.find((event) => observation.startsWith(event.prefix)) || null;
+}
+
+/** Rótulo, cor e texto de um evento do histórico, seja status ou observação. */
+function describeEntry(entry: HistoryEntry) {
+  const event = getObservationEvent(entry.observation);
+  const text = event
+    ? entry.observation?.slice(event.prefix.length).trim() || null
+    : entry.observation;
+  const statusChanged = entry.old_status !== entry.new_status;
+
+  if (event) {
+    return { label: event.label, color: event.color, icon: event.icon, text, statusChanged };
+  }
+  return {
+    label: statusChanged ? "Status alterado" : "Registro",
+    color: getStatusColor(entry.new_status || "SEM_STATUS"),
+    icon: statusChanged ? "🔄" : "📝",
+    text,
+    statusChanged,
+  };
+}
+
+interface ActivityGroup {
+  activityId: string;
+  title: string;
+  category: string;
+  entries: HistoryEntry[];
+  lastAt: string;
+  currentStatus: string | null;
+}
+
+/**
+ * Agrupa o histórico por atividade para que cada dropdown seja uma atividade.
+ * A rota devolve created_at DESC, então a primeira entrada de cada grupo é a
+ * mais recente — daí lastAt e o status atual saírem direto dela.
+ */
+function groupByActivity(entries: HistoryEntry[]): ActivityGroup[] {
+  const groups = new Map<string, ActivityGroup>();
+
+  entries.forEach((entry) => {
+    const existing = groups.get(entry.activity_id);
+    if (existing) {
+      existing.entries.push(entry);
+      return;
+    }
+    groups.set(entry.activity_id, {
+      activityId: entry.activity_id,
+      title: entry.activity || `Atividade ${entry.activity_id.slice(0, 8)}...`,
+      category: entry.category || "—",
+      entries: [entry],
+      lastAt: entry.created_at,
+      currentStatus: null,
+    });
+  });
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    currentStatus:
+      group.entries.find((entry) => entry.new_status && entry.new_status !== "SEM_STATUS")
+        ?.new_status ?? null,
+  }));
 }
 
 function formatDate(iso: string) {
@@ -205,6 +251,9 @@ function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  // Cada atividade é um dropdown fechado por padrão; abrir revela tudo que
+  // aconteceu com ela (status alterado, observação criada/editada/apagada).
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const isLocalDev =
     typeof window !== "undefined" &&
     window.location.protocol === "http:" &&
@@ -303,9 +352,31 @@ function HistoryPage() {
     return (
       h.activity?.toLowerCase().includes(s) ||
       h.user_name?.toLowerCase().includes(s) ||
-      h.category?.toLowerCase().includes(s)
+      h.category?.toLowerCase().includes(s) ||
+      h.observation?.toLowerCase().includes(s)
     );
   });
+
+  const groups = useMemo(() => groupByActivity(filtered), [filtered]);
+
+  // Durante uma busca não faz sentido obrigar o usuário a abrir grupo por grupo
+  // para ver o que casou com o termo.
+  useEffect(() => {
+    if (!searchTerm.trim()) return;
+    setOpenGroups(new Set(groups.map((group) => group.activityId)));
+  }, [searchTerm, groups]);
+
+  const toggleGroup = (activityId: string) => {
+    setOpenGroups((previous) => {
+      const next = new Set(previous);
+      if (next.has(activityId)) {
+        next.delete(activityId);
+      } else {
+        next.add(activityId);
+      }
+      return next;
+    });
+  };
 
   if (loading) {
     return (
@@ -418,17 +489,6 @@ function HistoryPage() {
           </div>
         )}
 
-        <div className="history-search">
-          <input
-            className="history-search-input"
-            type="text"
-            placeholder="Buscar no histórico..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <span className="search-icon">🔍</span>
-        </div>
-
         <section className="history-completions-section">
           <div className="history-section-header">
             <h2 style={{ color: "#E8EAF0", fontSize: 16, margin: 0 }}>Finalizações de checklist</h2>
@@ -452,90 +512,149 @@ function HistoryPage() {
           )}
         </section>
 
-        {filtered.length === 0 ? (
-          <div className="history-empty-state">
-            <p>
-              {history.length === 0 ? "Nenhuma alteração registrada ainda." : "Nenhum resultado encontrado."}
-            </p>
+        <section className="history-completions-section">
+          <div className="history-section-header">
+            <h2 style={{ color: "#E8EAF0", fontSize: 16, margin: 0 }}>Alterações por atividade</h2>
           </div>
-        ) : (
-          <div className="history-list">
-            {filtered.map((entry) => {
-              const event = getObservationEvent(entry.observation);
-              const observationText = event
-                ? entry.observation?.slice(event.prefix.length).trim()
-                : entry.observation;
 
-              const showStatusRow = !(
-                event &&
-                entry.old_status === "SEM_STATUS" &&
-                entry.new_status === "SEM_STATUS"
-              );
+          <div className="history-search">
+            <input
+              className="history-search-input"
+              type="text"
+              placeholder="Buscar por atividade, categoria, usuário ou observação..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <span className="search-icon">🔍</span>
+          </div>
 
-              return (
-                <div
-                  key={entry.id}
-                  className="history-card"
-                  style={{ borderLeftColor: event?.color || STATUS_COLOR[entry.new_status] || "#2A3045" }}
-                >
-                  <div className="history-card-content">
-                    <div className="history-card-main">
-                      <div className="history-category-tag">
-                        <span className="history-category-badge">
-                          {entry.category || "—"}
-                        </span>
-                      </div>
-
-                      <p className="history-activity">
-                        {entry.activity || `Atividade ${entry.activity_id.slice(0, 8)}...`}
-                      </p>
-
-                      {showStatusRow && (
-                        <div className="history-status-row">
-                          <span className="history-status-pill" style={{
-                            border: `1px solid ${STATUS_COLOR[entry.old_status] || "#2A3045"}`,
-                            color: STATUS_COLOR[entry.old_status] || "#7A82A0",
-                            background: `${STATUS_COLOR[entry.old_status] || "#2A3045"}15`
-                          }}>
-                            {STATUS_LABEL[entry.old_status] || entry.old_status || "—"}
-                          </span>
-                          <span style={{ color: "#4A5270", fontSize: 12 }}>→</span>
-                          <span className="history-status-pill" style={{
-                            border: `1px solid ${STATUS_COLOR[entry.new_status] || "#2A3045"}`,
-                            color: STATUS_COLOR[entry.new_status] || "#7A82A0",
-                            background: `${STATUS_COLOR[entry.new_status] || "#2A3045"}15`
-                          }}>
-                            {STATUS_LABEL[entry.new_status] || entry.new_status || "—"}
-                          </span>
-                        </div>
-                      )}
-
-                      {event && (
-                        <span className="history-observation-badge" style={{
-                          borderColor: event.color,
-                          color: event.color,
-                          background: `${event.color}20`,
-                        }}>
-                          {event.label}
-                        </span>
-                      )}
-                      {observationText && (
-                        <p className="history-observation" style={{ marginTop: event ? 8 : 0 }}>
-                          💬 {observationText}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="history-card-meta">
-                      <div className="meta-name">{entry.user_name}</div>
-                      <div className="meta-date">{formatDate(entry.created_at)}</div>
-                    </div>
-                  </div>
+          {groups.length === 0 ? (
+            <div className="history-empty-state">
+              <p>
+                {history.length === 0 ? "Nenhuma alteração registrada ainda." : "Nenhum resultado encontrado."}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="history-groups-toolbar">
+                <span className="history-groups-summary">
+                  {groups.length === 1 ? "1 atividade" : `${groups.length} atividades`}
+                  {" · "}
+                  {filtered.length === 1 ? "1 alteração" : `${filtered.length} alterações`}
+                </span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="button"
+                    className="history-toolbar-button"
+                    onClick={() => setOpenGroups(new Set(groups.map((group) => group.activityId)))}
+                  >
+                    Expandir tudo
+                  </button>
+                  <button
+                    type="button"
+                    className="history-toolbar-button"
+                    onClick={() => setOpenGroups(new Set())}
+                  >
+                    Recolher tudo
+                  </button>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              </div>
+
+              <div className="history-groups">
+                {groups.map((group) => {
+                  const isOpen = openGroups.has(group.activityId);
+                  const panelId = `history-group-${group.activityId}`;
+
+                  return (
+                    <div key={group.activityId} className="history-group" data-open={isOpen}>
+                      <button
+                        type="button"
+                        className="history-group-trigger"
+                        aria-expanded={isOpen}
+                        aria-controls={panelId}
+                        onClick={() => toggleGroup(group.activityId)}
+                      >
+                        <span className="history-group-head">
+                          <span className="history-group-badges">
+                            <span className="history-category-badge">{group.category}</span>
+                            {group.currentStatus && (
+                              <span className="history-status-pill" style={getStatusPillStyle(group.currentStatus)}>
+                                {STATUS_LABELS[group.currentStatus] || group.currentStatus}
+                              </span>
+                            )}
+                          </span>
+                          <span className="history-group-title">{group.title}</span>
+                          <span className="history-group-meta">
+                            {group.entries.length === 1 ? "1 alteração" : `${group.entries.length} alterações`}
+                            {" · última em "}
+                            {formatDate(group.lastAt)}
+                          </span>
+                        </span>
+                        <span className="history-group-caret" data-open={isOpen}>▼</span>
+                      </button>
+
+                      {isOpen && (
+                        <ul className="history-events" id={panelId}>
+                          {group.entries.map((entry) => {
+                            const info = describeEntry(entry);
+
+                            return (
+                              <li
+                                key={entry.id}
+                                className="history-event"
+                                style={{ borderLeftColor: info.color }}
+                              >
+                                <div className="history-event-head">
+                                  <span
+                                    className="history-event-kind"
+                                    style={{
+                                      borderColor: info.color,
+                                      color: info.color,
+                                      background: `${info.color}1F`,
+                                    }}
+                                  >
+                                    <span aria-hidden="true">{info.icon}</span>
+                                    {info.label}
+                                  </span>
+                                  <span className="history-event-time">{formatDate(entry.created_at)}</span>
+                                </div>
+
+                                {info.statusChanged && (
+                                  <div className="history-status-row">
+                                    <span className="history-status-pill" style={getStatusPillStyle(entry.old_status)}>
+                                      {STATUS_LABELS[entry.old_status] || entry.old_status || "—"}
+                                    </span>
+                                    <span style={{ color: "#7A82A0", fontSize: 14 }}>→</span>
+                                    <span className="history-status-pill" style={getStatusPillStyle(entry.new_status)}>
+                                      {STATUS_LABELS[entry.new_status] || entry.new_status || "—"}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {info.text && (
+                                  <p
+                                    className="history-event-comment"
+                                    style={{ marginTop: info.statusChanged ? 10 : 0 }}
+                                  >
+                                    {info.text}
+                                  </p>
+                                )}
+
+                                <div className="history-event-user">
+                                  por <strong>{entry.user_name}</strong>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </section>
       </main>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, initDb } from "@/lib/db";
-import { authenticateToken } from "@/lib/sasi";
+import { authenticateToken } from "@/lib/auth";
 
 function isLocalRequest(host: string | null) {
   return !!host && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);

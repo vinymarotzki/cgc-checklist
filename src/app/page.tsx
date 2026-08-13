@@ -4,6 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
+import {
+  STATUS_OPTIONS,
+  getCategoryColor,
+  getStatusColor,
+  getStatusStyle,
+} from "@/lib/checklist-status";
 
 interface Activity {
   id: string;
@@ -27,45 +33,6 @@ interface Observation {
   updated_at: string;
 }
 
-const STATUS_OPTIONS = [
-  { value: "NAO_INICIADO", label: "Não Iniciado", color: "#b10202" },
-  { value: "EM_ANDAMENTO", label: "Em Andamento", color: "#ffe5a0" },
-  { value: "CONCLUIDO", label: "Concluído", color: "#11734b" },
-];
-
-function getStatusStyle(status: string) {
-  const map: Record<string, { bg: string; text: string; border: string }> = {
-    NAO_INICIADO: { bg: "#b10202", text: "#F8FAFC", border: "#7a0202" },
-    EM_ANDAMENTO: { bg: "#ffe5a0", text: "#1F1F1F", border: "#d6c27b" },
-    CONCLUIDO: { bg: "#11734b", text: "#F8FAFC", border: "#0e5b3f" },
-    IMPEDIDO: { bg: "#b10202", text: "#F8FAFC", border: "#7a0202" },
-  };
-  return map[status] ?? map["NAO_INICIADO"];
-}
-
-function getStatusColor(status: string) {
-  const map: Record<string, string> = {
-    NAO_INICIADO: "#b10202",
-    EM_ANDAMENTO: "#ffe5a0",
-    CONCLUIDO: "#11734b",
-    IMPEDIDO: "#b10202",
-    SEM_STATUS: "#e8eaed",
-  };
-  return map[status] ?? "#7A82A0";
-}
-
-function getCategoryColor(category: string) {
-  const colors = [
-    "#3B6EF5", "#8B5CF6", "#06B6D4", "#F59E0B",
-    "#10B981", "#EF4444", "#EC4899", "#6366F1",
-  ];
-  let hash = 0;
-  for (let i = 0; i < category.length; i++) {
-    hash = category.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-}
-
 function groupByCategory(activities: Activity[]) {
   const groups: Record<string, Activity[]> = {};
   for (const a of activities) {
@@ -86,15 +53,13 @@ function getCategoryStats(activities: Activity[]) {
 function ChecklistPage() {
   const searchParams = useSearchParams();
   const token = searchParams.get("sasi-token") || searchParams.get("token") || "";
+  const checklistId = searchParams.get("checklist") || "";
 
   const [activities, setActivities] = useState<Activity[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
-  const [completing, setCompleting] = useState(false);
-  const [completionMessage, setCompletionMessage] = useState<string | null>(null);
-  const [completionError, setCompletionError] = useState<string | null>(null);
   const [observations, setObservations] = useState<Observation[]>([]);
   const [activeActivityId, setActiveActivityId] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -113,7 +78,25 @@ function ChecklistPage() {
       return;
     }
     try {
-      const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
+      if (!checklistId) {
+        const authQuery = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
+        const authRes = await fetch(`/api/checklists${authQuery}`);
+        if (!authRes.ok) {
+          setAuthError(true);
+          setLoading(false);
+          return;
+        }
+        const authData = await authRes.json();
+        setActivities([]);
+        setUser(authData.user);
+        setLoading(false);
+        return;
+      }
+
+      const params = new URLSearchParams();
+      if (token) params.set("sasi-token", token);
+      params.set("checklist", checklistId);
+      const query = `?${params.toString()}`;
       const res = await fetch(`/api/activities${query}`);
       if (!res.ok) {
         setAuthError(true);
@@ -128,10 +111,10 @@ function ChecklistPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, isLocalDev]);
+  }, [token, isLocalDev, checklistId]);
 
   const fetchObservations = useCallback(async () => {
-    if (!token && !isLocalDev) return;
+    if ((!token && !isLocalDev) || !checklistId) return;
     try {
       const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
       const res = await fetch(`/api/observations${query}`);
@@ -141,7 +124,7 @@ function ChecklistPage() {
     } catch {
       // ignore
     }
-  }, [token, isLocalDev]);
+  }, [token, isLocalDev, checklistId]);
 
   useEffect(() => {
     fetchActivities();
@@ -151,7 +134,10 @@ function ChecklistPage() {
   async function updateActivity(id: string, patch: Partial<Activity>) {
     setSaving(id);
     try {
-      const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
+      const params = new URLSearchParams();
+      if (token) params.set("sasi-token", token);
+      if (checklistId) params.set("checklist", checklistId);
+      const query = params.toString() ? `?${params.toString()}` : "";
       await fetch(`/api/activities${query}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -231,29 +217,6 @@ function ChecklistPage() {
   const inProgressPct = totalStats.total > 0 ? (totalStats.inProgress / totalStats.total) * 100 : 0;
   const donePct = totalStats.total > 0 ? (totalStats.done / totalStats.total) * 100 : 0;
 
-  const finalizeChecklist = async () => {
-    if (completionPct < 100) return;
-
-    setCompleting(true);
-    setCompletionError(null);
-    setCompletionMessage(null);
-
-    try {
-      const query = token ? `?sasi-token=${encodeURIComponent(token)}` : "";
-      const res = await fetch(`/api/checklists${query}`, { method: "POST" });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error || "Falha ao finalizar checklist");
-      }
-      setCompletionMessage("Checklist finalizado e reiniciado com sucesso.");
-      await fetchActivities();
-    } catch (error) {
-      setCompletionError(error instanceof Error ? error.message : "Erro inesperado ao finalizar checklist.");
-    } finally {
-      setCompleting(false);
-    }
-  };
-
   const filteredActivities = activities.filter((a) => {
     const matchFilter = filter === "TODOS" || a.status === filter;
     const matchSearch = !searchTerm ||
@@ -292,7 +255,7 @@ function ChecklistPage() {
             Acesso negado
           </h2>
           <p style={{ color: "#7A82A0", fontSize: 14, lineHeight: 1.6 }}>
-            Token inválido ou não informado. Acesse o sistema através do link fornecido pelo SASI.
+            Token inválido ou não informado. Acesse o sistema pelo link de acesso fornecido.
           </p>
           {!token && (
             <p style={{ color: "#4A5270", fontSize: 12, marginTop: 12, fontFamily: "monospace" }}>
@@ -304,16 +267,49 @@ function ChecklistPage() {
     );
   }
 
+  if (!checklistId) {
+    const checklistsHref = token ? `/checklists?sasi-token=${encodeURIComponent(token)}` : "/checklists";
+    return (
+      <div style={{ background: "#0F1117", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{
+          background: "#181C27", border: "1px solid #2A3045",
+          borderRadius: 12, padding: "36px 42px", textAlign: "center", maxWidth: 460
+        }}>
+          <h1 style={{ color: "#E8EAF0", fontSize: 22, fontWeight: 700, margin: "0 0 10px" }}>
+            Selecione um checklist
+          </h1>
+          <p style={{ color: "#7A82A0", fontSize: 14, lineHeight: 1.6, margin: "0 0 20px" }}>
+            Abra a tela de checklists para escolher um cadastro ou importar uma nova planilha.
+          </p>
+          <Link
+            href={checklistsHref}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#3B6EF5",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: 8,
+              padding: "10px 16px",
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+          >
+            Ir para checklists
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ background: "#0F1117", minHeight: "100vh" }}>
       {/* Header */}
-      <header style={{
-        background: "#181C27", borderBottom: "1px solid #2A3045",
-        padding: "0 24px", position: "sticky", top: 0, zIndex: 100
-      }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
+      <header className="app-header">
+        <div className="app-header-inner">
           <div />
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div className="app-nav">
             <Link
               href={isLocalDev ? "/history" : `/history?sasi-token=${encodeURIComponent(token)}`}
               style={{
@@ -324,6 +320,28 @@ function ChecklistPage() {
               }}
             >
               📋 Histórico
+            </Link>
+            <Link
+              href={isLocalDev ? "/checklists" : `/checklists?sasi-token=${encodeURIComponent(token)}`}
+              style={{
+                color: "#7A82A0", fontSize: 13, textDecoration: "none",
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
+                transition: "all 0.15s"
+              }}
+            >
+              Checklists
+            </Link>
+            <Link
+              href={isLocalDev ? "/atividades-cgc" : `/atividades-cgc?sasi-token=${encodeURIComponent(token)}`}
+              style={{
+                color: "#7A82A0", fontSize: 13, textDecoration: "none",
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
+                transition: "all 0.15s"
+              }}
+            >
+              Atividades CGC
             </Link>
             <div style={{
               display: "flex", alignItems: "center", gap: 8,
@@ -352,7 +370,7 @@ function ChecklistPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
             <div>
               <h1 style={{ color: "#E8EAF0", fontSize: 22, fontWeight: 700, margin: 0 }}>
-                Checklist de Abandono de Área
+                Checklist selecionado
               </h1>
               <p style={{ color: "#7A82A0", fontSize: 13, marginTop: 4 }}>
                 {totalStats.total} atividades · {totalStats.done} concluídas
@@ -400,34 +418,6 @@ function ChecklistPage() {
               }} />
             </div>
           </div>
-
-          {completionPct === 100 && (
-            <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <button
-                onClick={finalizeChecklist}
-                disabled={completing}
-                style={{
-                  background: "#10B981",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "10px 18px",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: completing ? "not-allowed" : "pointer",
-                  opacity: completing ? 0.7 : 1,
-                }}
-              >
-                {completing ? "Finalizando..." : "Finalizar checklist"}
-              </button>
-              {completionMessage && (
-                <span style={{ color: "#34D399", fontSize: 13 }}>{completionMessage}</span>
-              )}
-              {completionError && (
-                <span style={{ color: "#F87171", fontSize: 13 }}>{completionError}</span>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Filters */}

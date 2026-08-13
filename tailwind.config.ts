@@ -13,7 +13,7 @@ const config: Config = {
         mono: ["JetBrains Mono", "monospace"],
       },
       colors: {
-        sasi: {
+        app: {
           bg: "#0F1117",
           surface: "#181C27",
           card: "#1E2333",
