@@ -39,21 +39,20 @@ const DEFAULT_TIMEOUT_MS = 15000;
 /**
  * Resolve qual token usar para falar com a API SASI.
  *
- * A API sempre exige Bearer — não existe leitura anônima. O que muda por
- * ambiente é a origem do token:
- *
- * - Padrão: vem do `sasi-token` da URL, para os dados saírem no escopo do
- *   usuário que abriu a tela.
- * - Alternativa: quando o token da URL autentica o usuário mas não serve para a
- *   API SASI, cai em `SASI_API_TOKEN` do `.env.local`. É token de servidor e
- *   nunca chega ao browser.
+ * A API sempre exige Bearer — não existe leitura anônima. O token do header
+ * `x-sasi-token` autentica o usuário em `AUTH_USER_ENDPOINT` (domínio
+ * `api.sasi.io`), mas a Bone API (`api.bone.sasi.io`) só aceita token de
+ * provider (`pat_…`, escopo `READ_MESSAGES`) — são credenciais de domínios
+ * diferentes, uma não substitui a outra. Por isso `SASI_API_TOKEN` do
+ * `.env.local` vem primeiro; o token do usuário só é tentado quando não há
+ * `SASI_API_TOKEN` configurado.
  */
-export function resolveSasiToken(urlToken: string | null | undefined): string | null {
-  const fromUrl = urlToken?.trim();
-  if (fromUrl) return fromUrl;
-
+export function resolveSasiToken(userToken: string | null | undefined): string | null {
   const fromEnv = process.env.SASI_API_TOKEN?.trim();
-  return fromEnv ? fromEnv : null;
+  if (fromEnv) return fromEnv;
+
+  const fromUser = userToken?.trim();
+  return fromUser ? fromUser : null;
 }
 
 function getBaseUrl(): string {
