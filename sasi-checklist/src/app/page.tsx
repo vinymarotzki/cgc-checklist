@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { TOKEN_PARAM, readSasiToken, sasiTokenQuery } from "@/lib/token";
+import { sasiAuthHeaders } from "@/lib/token";
+import { useSasiToken } from "@/hooks/useSasiToken";
 import Link from "next/link";
 import { Suspense } from "react";
+import { History, ClipboardList, Search, MessageSquare, Pencil, X, Lock } from "lucide-react";
 import {
   STATUS_OPTIONS,
   getCategoryColor,
@@ -53,9 +55,7 @@ function getCategoryStats(activities: Activity[]) {
 
 function ChecklistPage() {
   const searchParams = useSearchParams();
-  // Token só é aceito em `sasi-token`; qualquer outra forma é usuário sem acesso.
-  const token = readSasiToken(searchParams);
-  const authQuery = sasiTokenQuery(token);
+  const token = useSasiToken();
   const checklistId = searchParams.get("checklist") || "";
 
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -78,7 +78,7 @@ function ChecklistPage() {
     }
     try {
       if (!checklistId) {
-        const authRes = await fetch(`/api/checklists${authQuery}`);
+        const authRes = await fetch("/api/checklists", { headers: sasiAuthHeaders(token) });
         if (!authRes.ok) {
           setAuthError(true);
           setLoading(false);
@@ -91,11 +91,8 @@ function ChecklistPage() {
         return;
       }
 
-      const params = new URLSearchParams();
-      params.set(TOKEN_PARAM, token);
-      params.set("checklist", checklistId);
-      const query = `?${params.toString()}`;
-      const res = await fetch(`/api/activities${query}`);
+      const query = `?checklist=${encodeURIComponent(checklistId)}`;
+      const res = await fetch(`/api/activities${query}`, { headers: sasiAuthHeaders(token) });
       if (!res.ok) {
         setAuthError(true);
         setLoading(false);
@@ -109,19 +106,19 @@ function ChecklistPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, authQuery, checklistId]);
+  }, [token, checklistId]);
 
   const fetchObservations = useCallback(async () => {
     if (!token || !checklistId) return;
     try {
-      const res = await fetch(`/api/observations${authQuery}`);
+      const res = await fetch("/api/observations", { headers: sasiAuthHeaders(token) });
       if (!res.ok) return;
       const data = await res.json();
       setObservations(data.observations || []);
     } catch {
       // ignore
     }
-  }, [token, authQuery, checklistId]);
+  }, [token, checklistId]);
 
   useEffect(() => {
     fetchActivities();
@@ -131,13 +128,10 @@ function ChecklistPage() {
   async function updateActivity(id: string, patch: Partial<Activity>) {
     setSaving(id);
     try {
-      const params = new URLSearchParams();
-      if (token) params.set(TOKEN_PARAM, token);
-      if (checklistId) params.set("checklist", checklistId);
-      const query = params.toString() ? `?${params.toString()}` : "";
+      const query = checklistId ? `?checklist=${encodeURIComponent(checklistId)}` : "";
       await fetch(`/api/activities${query}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...sasiAuthHeaders(token) },
         body: JSON.stringify({ id, ...patch }),
       });
       setActivities((prev) =>
@@ -155,22 +149,21 @@ function ChecklistPage() {
       return;
     }
 
-    const query = authQuery;
     const payload = { text: obsValue.trim() };
 
     if (editingNoteId) {
-      const res = await fetch(`/api/observations${query}`, {
+      const res = await fetch("/api/observations", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...sasiAuthHeaders(token) },
         body: JSON.stringify({ id: editingNoteId, ...payload }),
       });
       if (!res.ok) return;
       const data = await res.json();
       setObservations((prev) => prev.map((note) => note.id === editingNoteId ? data.observation : note));
     } else {
-      const res = await fetch(`/api/observations${query}`, {
+      const res = await fetch("/api/observations", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...sasiAuthHeaders(token) },
         body: JSON.stringify({ activity_id: activeActivityId, ...payload }),
       });
       if (!res.ok) return;
@@ -184,10 +177,9 @@ function ChecklistPage() {
   }
 
   async function deleteObs(id: string) {
-    const query = authQuery;
-    const res = await fetch(`/api/observations${query}`, {
+    const res = await fetch("/api/observations", {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...sasiAuthHeaders(token) },
       body: JSON.stringify({ id }),
     });
     if (!res.ok) return;
@@ -247,7 +239,7 @@ function ChecklistPage() {
           background: "#181C27", border: "1px solid #2A1A1A",
           borderRadius: 12, padding: "40px 48px", textAlign: "center", maxWidth: 400
         }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
+          <Lock size={36} color="#F87171" style={{ marginBottom: 16 }} />
           <h2 style={{ color: "#F87171", fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
             Acesso negado
           </h2>
@@ -265,7 +257,7 @@ function ChecklistPage() {
   }
 
   if (!checklistId) {
-    const checklistsHref = `/checklists${authQuery}`;
+    const checklistsHref = "/checklists";
     return (
       <div style={{ background: "#0F1117", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
         <div style={{
@@ -308,7 +300,7 @@ function ChecklistPage() {
           <div />
           <div className="app-nav">
             <Link
-              href={`/history${authQuery}`}
+              href="/history"
               style={{
                 color: "#7A82A0", fontSize: 13, textDecoration: "none",
                 display: "flex", alignItems: "center", gap: 6,
@@ -316,10 +308,10 @@ function ChecklistPage() {
                 transition: "all 0.15s"
               }}
             >
-              📋 Histórico
+              <History size={14} /> Histórico
             </Link>
             <Link
-              href={`/checklists${authQuery}`}
+              href="/checklists"
               style={{
                 color: "#7A82A0", fontSize: 13, textDecoration: "none",
                 display: "flex", alignItems: "center", gap: 6,
@@ -327,18 +319,7 @@ function ChecklistPage() {
                 transition: "all 0.15s"
               }}
             >
-              Checklists
-            </Link>
-            <Link
-              href={`/atividades-cgc${authQuery}`}
-              style={{
-                color: "#7A82A0", fontSize: 13, textDecoration: "none",
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
-                transition: "all 0.15s"
-              }}
-            >
-              Atividades CGC
+              <ClipboardList size={14} /> Checklists
             </Link>
             <div style={{
               display: "flex", alignItems: "center", gap: 8,
@@ -431,7 +412,7 @@ function ChecklistPage() {
                 fontSize: 13, outline: "none"
               }}
             />
-            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#4A5270", fontSize: 14 }}>🔍</span>
+            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#4A5270" }} />
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {["TODOS", "NAO_INICIADO", "EM_ANDAMENTO", "CONCLUIDO"].map((f) => {
@@ -515,8 +496,8 @@ function ChecklistPage() {
                             </p>
                             {(observationsByActivity[activity.id] || []).map((note) => (
                               <div key={note.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, marginTop: 4 }}>
-                                <p style={{ color: "#4A5270", fontSize: 12, margin: 0, fontStyle: "italic", flex: 1, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-                                  💬 {note.text}
+                                <p style={{ color: "#4A5270", fontSize: 12, margin: 0, fontStyle: "italic", flex: 1, whiteSpace: "pre-wrap", lineHeight: 1.5, display: "flex", alignItems: "flex-start", gap: 5 }}>
+                                  <MessageSquare size={12} style={{ flexShrink: 0, marginTop: 2 }} /> {note.text}
                                 </p>
                                 <button
                                   onClick={() => {
@@ -527,22 +508,22 @@ function ChecklistPage() {
                                   title="Editar observação"
                                   style={{
                                     background: "transparent", border: "none",
-                                    padding: "4px", cursor: "pointer",
-                                    color: "#60A5FA", fontSize: 12, transition: "color 0.15s"
+                                    padding: "4px", cursor: "pointer", display: "flex",
+                                    color: "#60A5FA", transition: "color 0.15s"
                                   }}
                                 >
-                                  ✏️
+                                  <Pencil size={12} />
                                 </button>
                                 <button
                                   onClick={() => deleteObs(note.id)}
                                   title="Apagar observação"
                                   style={{
                                     background: "transparent", border: "none",
-                                    padding: "4px", cursor: "pointer",
-                                    color: "#F87171", fontSize: 12, transition: "color 0.15s"
+                                    padding: "4px", cursor: "pointer", display: "flex",
+                                    color: "#F87171", transition: "color 0.15s"
                                   }}
                                 >
-                                  ✕
+                                  <X size={12} />
                                 </button>
                               </div>
                             ))}
@@ -579,12 +560,12 @@ function ChecklistPage() {
                               title="Nova observação"
                               style={{
                                 background: "transparent", border: "1px solid #2A3045",
-                                borderRadius: 6, padding: "5px 8px", cursor: "pointer",
+                                borderRadius: 6, padding: "5px 8px", cursor: "pointer", display: "flex",
                                 color: (observationsByActivity[activity.id] || []).length > 0 ? "#60A5FA" : "#4A5270",
-                                fontSize: 13, transition: "all 0.15s"
+                                transition: "all 0.15s"
                               }}
                             >
-                              💬
+                              <MessageSquare size={14} />
                             </button>
 
                             {/* Saving indicator */}

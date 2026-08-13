@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { readSasiToken, sasiTokenQuery } from "@/lib/token";
+import { sasiAuthHeaders } from "@/lib/token";
+import { useSasiToken } from "@/hooks/useSasiToken";
 import { STATUS_LABELS, getStatusColor, getStatusPillStyle } from "@/lib/checklist-status";
+import {
+  Lock, Search, ArrowLeft, History, MessageSquare, Pencil, Trash2, RefreshCw,
+  FileText, ChevronDown, ChevronUp, type LucideIcon,
+} from "lucide-react";
 
 interface CgcHistoryEntry {
   id: string;
@@ -32,10 +36,10 @@ interface User {
 }
 
 /** Mesmos prefixos usados pelo histórico do checklist. */
-const OBSERVATION_EVENTS = [
-  { prefix: "Observação adicionada:", label: "Comentário criado", color: "#60A5FA", icon: "💬" },
-  { prefix: "Observação editada:", label: "Comentário editado", color: "#F59E0B", icon: "✏️" },
-  { prefix: "Observação apagada:", label: "Comentário apagado", color: "#F87171", icon: "🗑️" },
+const OBSERVATION_EVENTS: { prefix: string; label: string; color: string; icon: LucideIcon }[] = [
+  { prefix: "Observação adicionada:", label: "Comentário criado", color: "#60A5FA", icon: MessageSquare },
+  { prefix: "Observação editada:", label: "Comentário editado", color: "#F59E0B", icon: Pencil },
+  { prefix: "Observação apagada:", label: "Comentário apagado", color: "#F87171", icon: Trash2 },
 ];
 
 function getObservationEvent(observation: string | null) {
@@ -57,7 +61,7 @@ function describeEntry(entry: CgcHistoryEntry) {
   return {
     label: statusChanged ? "Status alterado" : "Registro",
     color: getStatusColor(entry.new_status || "SEM_STATUS"),
-    icon: statusChanged ? "🔄" : "📝",
+    icon: statusChanged ? RefreshCw : FileText,
     text,
     statusChanged,
   };
@@ -128,9 +132,7 @@ function formatDate(iso: string) {
 }
 
 function CgcHistoryPage() {
-  const searchParams = useSearchParams();
-  // Token só é aceito em `sasi-token`; qualquer outra forma é usuário sem acesso.
-  const token = readSasiToken(searchParams);
+  const token = useSasiToken();
 
   const [history, setHistory] = useState<CgcHistoryEntry[]>([]);
   const [groups, setGroups] = useState<GroupSummary[]>([]);
@@ -142,9 +144,7 @@ function CgcHistoryPage() {
   // aconteceu com ela (status alterado, comentário criado/editado/apagado).
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
 
-  const query = useMemo(() => sasiTokenQuery(token), [token]);
-
-  const backHref = `/atividades-cgc${query}`;
+  const backHref = "/atividades-cgc";
 
   const fetchHistory = useCallback(async () => {
     if (!token) {
@@ -154,7 +154,7 @@ function CgcHistoryPage() {
     }
 
     try {
-      const res = await fetch(`/api/cgc/history${query}`);
+      const res = await fetch("/api/cgc/history", { headers: sasiAuthHeaders(token) });
       if (!res.ok) {
         setAuthError(true);
         return;
@@ -168,7 +168,7 @@ function CgcHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [query, token]);
+  }, [token]);
 
   useEffect(() => {
     fetchHistory();
@@ -219,7 +219,7 @@ function CgcHistoryPage() {
     return (
       <div style={{ background: "#0F1117", minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
         <div style={{ background: "#181C27", border: "1px solid #2A1A1A", borderRadius: 12, padding: 32, maxWidth: 420, textAlign: "center" }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
+          <Lock size={36} color="#F87171" style={{ marginBottom: 16 }} />
           <h1 style={{ color: "#F87171", fontSize: 20, margin: "0 0 8px" }}>Acesso negado</h1>
           <p style={{ color: "#7A82A0", fontSize: 14, margin: 0 }}>Token inválido ou não informado.</p>
         </div>
@@ -234,8 +234,8 @@ function CgcHistoryPage() {
       <header className="app-header">
         <div className="app-header-inner">
           <div className="app-nav">
-            <Link href={backHref} className="history-back-link">← Atividades do CGC</Link>
-            <span className="history-page-title">📋 Histórico do CGC</span>
+            <Link href={backHref} className="history-back-link"><ArrowLeft size={14} /> Atividades do CGC</Link>
+            <span className="history-page-title"><History size={15} /> Histórico do CGC</span>
           </div>
           <span className="history-user-badge">{user.name}</span>
         </div>
@@ -297,7 +297,7 @@ function CgcHistoryPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <span className="search-icon">🔍</span>
+            <Search size={14} className="search-icon" />
           </div>
 
           {activityGroups.length === 0 ? (
@@ -320,16 +320,18 @@ function CgcHistoryPage() {
                   <button
                     type="button"
                     className="history-toolbar-button"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
                     onClick={() => setOpenGroups(new Set(activityGroups.map((group) => group.messageId)))}
                   >
-                    Expandir tudo
+                    <ChevronDown size={12} /> Expandir tudo
                   </button>
                   <button
                     type="button"
                     className="history-toolbar-button"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
                     onClick={() => setOpenGroups(new Set())}
                   >
-                    Recolher tudo
+                    <ChevronUp size={12} /> Recolher tudo
                   </button>
                 </div>
               </div>
@@ -370,7 +372,7 @@ function CgcHistoryPage() {
                             {formatDate(group.lastAt)}
                           </span>
                         </span>
-                        <span className="history-group-caret" data-open={isOpen}>▼</span>
+                        <span className="history-group-caret" data-open={isOpen}><ChevronDown size={14} /></span>
                       </button>
 
                       {isOpen && (
@@ -393,7 +395,7 @@ function CgcHistoryPage() {
                                       background: `${info.color}1F`,
                                     }}
                                   >
-                                    <span aria-hidden="true">{info.icon}</span>
+                                    <info.icon size={12} aria-hidden="true" />
                                     {info.label}
                                   </span>
                                   <span className="history-event-time">{formatDate(entry.created_at)}</span>

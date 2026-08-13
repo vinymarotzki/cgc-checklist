@@ -1,12 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { TOKEN_PARAM, readSasiToken, sasiTokenQuery } from "@/lib/token";
+import { sasiAuthHeaders } from "@/lib/token";
+import { useSasiToken } from "@/hooks/useSasiToken";
+import { getCgcGroupColor } from "@/lib/cgc/colors";
+import {
+  ArrowLeft, ChevronUp, ChevronDown, Pencil, X, MessageSquare,
+  History, Search, Lock, RefreshCw, ListFilter, ExternalLink,
+} from "lucide-react";
 import {
   STATUS_OPTIONS,
-  getCategoryColor,
   getStatusColor,
   getStatusStyle,
 } from "@/lib/checklist-status";
@@ -32,62 +37,25 @@ interface Observation {
 }
 
 /** Grupo com o contador de concluídas que a API de grupos devolve. */
-type GroupWithProgress = CgcGroup & { concluded?: number };
-
-interface GroupFormState {
-  name: string;
-  channel_ids: string;
-  data_field_value: string;
-  data_field_name: string;
-  category_ids: string;
-  team_name: string;
-  app_ids: string;
-}
-
-const EMPTY_GROUP_FORM: GroupFormState = {
-  name: "",
-  channel_ids: "",
-  data_field_value: "",
-  data_field_name: "",
-  category_ids: "",
-  team_name: "",
-  app_ids: "",
-};
-
-const GROUP_FORM_FIELDS = [
-  {
-    key: "channel_ids",
-    label: "IDs de canal",
-    hint: "channel_ids — canal que entrega as atividades (ex.: 33397)",
-  },
-  {
-    key: "data_field_value",
-    label: "Valor que identifica o grupo",
-    hint: "Valor procurado nos campos da mensagem (ex.: NGOA). Em branco, o grupo não é roteado por campo.",
-  },
-  {
-    key: "data_field_name",
-    label: "Campo que carrega esse valor (opcional)",
-    hint: "Em branco, procura em todos os campos do formulário e do perfil.",
-  },
-  {
-    key: "category_ids",
-    label: "IDs de categoria (opcional)",
-    hint: "category_ids — separados por vírgula",
-  },
-  {
-    key: "team_name",
-    label: "Nome do time (opcional)",
-    hint: "team_name — valor exato de raw.team.name",
-  },
-  {
-    key: "app_ids",
-    label: "IDs de app (opcional)",
-    hint: "app_ids — separados por vírgula",
-  },
-] as const;
+type GroupWithProgress = CgcGroup & { total?: number; concluded?: number };
 
 const PAGE_SIZE = 50;
+
+/**
+ * Ordem fixa de exibição dos grupos semeados. Grupos criados depois (fora
+ * dessa lista) aparecem ao final, na ordem em que a API os devolve.
+ */
+const GROUP_DISPLAY_ORDER = ["CGC", "NUPPAE", "NGOA", "CIPA"];
+
+function sortGroupsByDisplayOrder<T extends { name: string }>(groups: T[]): T[] {
+  return [...groups].sort((a, b) => {
+    const indexA = GROUP_DISPLAY_ORDER.indexOf(a.name.trim().toUpperCase());
+    const indexB = GROUP_DISPLAY_ORDER.indexOf(b.name.trim().toUpperCase());
+    const rankA = indexA === -1 ? GROUP_DISPLAY_ORDER.length : indexA;
+    const rankB = indexB === -1 ? GROUP_DISPLAY_ORDER.length : indexB;
+    return rankA - rankB;
+  });
+}
 
 /**
  * Intervalo de sincronização automática com a API SASI. Além dele, a lista é
@@ -160,8 +128,7 @@ function getStats(activities: CgcActivity[]) {
 
 function AtividadesCgcPage() {
   const searchParams = useSearchParams();
-  // Token só é aceito em `sasi-token`; qualquer outra forma é usuário sem acesso.
-  const token = readSasiToken(searchParams);
+  const token = useSasiToken();
   const groupId = searchParams.get("grupo") || "";
 
   const [user, setUser] = useState<User | null>(null);
@@ -185,12 +152,6 @@ function AtividadesCgcPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<GroupFormState>(EMPTY_GROUP_FORM);
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
 
@@ -198,19 +159,25 @@ function AtividadesCgcPage() {
   const [activeActivityId, setActiveActivityId] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [obsValue, setObsValue] = useState("");
+  // Cards de atividade escondem os campos dinâmicos por padrão; abrir um não
+  // deve remover a memória dos outros já abertos, daí o Set em vez de um id só.
+  const [expandedFieldIds, setExpandedFieldIds] = useState<Set<string>>(new Set());
 
-  const query = useMemo(() => sasiTokenQuery(token), [token]);
+  function toggleFields(id: string) {
+    setExpandedFieldIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
-  const hrefWithToken = useCallback(
-    (path: string, extra?: Record<string, string>) => {
-      const params = new URLSearchParams();
-      if (token) params.set(TOKEN_PARAM, token);
-      for (const [key, value] of Object.entries(extra || {})) params.set(key, value);
-      const qs = params.toString();
-      return qs ? `${path}?${qs}` : path;
-    },
-    [token]
-  );
+  const hrefWithParams = useCallback((path: string, extra?: Record<string, string>) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(extra || {})) params.set(key, value);
+    const qs = params.toString();
+    return qs ? `${path}?${qs}` : path;
+  }, []);
 
   const fetchGroups = useCallback(async () => {
     if (!token) {
@@ -218,7 +185,7 @@ function AtividadesCgcPage() {
       return;
     }
     try {
-      const res = await fetch(`/api/cgc/groups${query}`);
+      const res = await fetch("/api/cgc/groups", { headers: sasiAuthHeaders(token) });
       if (res.status === 401) {
         setAuthError(true);
         return;
@@ -233,7 +200,7 @@ function AtividadesCgcPage() {
     } catch {
       setApiError("Falha de conexão ao carregar os grupos.");
     }
-  }, [query, token]);
+  }, [token]);
 
   const fetchActivities = useCallback(
     async (options: { showIndicator?: boolean } = {}) => {
@@ -249,13 +216,12 @@ function AtividadesCgcPage() {
 
       try {
         const params = new URLSearchParams();
-        if (token) params.set(TOKEN_PARAM, token);
         params.set("group", groupId);
         params.set("page", String(page));
         params.set("limit", String(PAGE_SIZE));
         if (search) params.set("search", search);
 
-        const res = await fetch(`/api/cgc/activities?${params.toString()}`);
+        const res = await fetch(`/api/cgc/activities?${params.toString()}`, { headers: sasiAuthHeaders(token) });
         const data = await res.json().catch(() => null);
 
         if (res.status === 401) {
@@ -298,14 +264,14 @@ function AtividadesCgcPage() {
   const fetchObservations = useCallback(async () => {
     if (!token || !groupId) return;
     try {
-      const res = await fetch(`/api/cgc/observations${query}`);
+      const res = await fetch("/api/cgc/observations", { headers: sasiAuthHeaders(token) });
       if (!res.ok) return;
       const data = await res.json();
       setObservations(Array.isArray(data.observations) ? data.observations : []);
     } catch {
       // Comentário é acessório: falhar aqui não pode derrubar a listagem.
     }
-  }, [groupId, query, token]);
+  }, [groupId, token]);
 
   useEffect(() => {
     let active = true;
@@ -371,9 +337,9 @@ function AtividadesCgcPage() {
 
     try {
       if (editingNoteId) {
-        const res = await fetch(`/api/cgc/observations${query}`, {
+        const res = await fetch("/api/cgc/observations", {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...sasiAuthHeaders(token) },
           body: JSON.stringify({ id: editingNoteId, ...payload }),
         });
         if (!res.ok) return;
@@ -382,9 +348,9 @@ function AtividadesCgcPage() {
           prev.map((note) => (note.id === editingNoteId ? data.observation : note))
         );
       } else {
-        const res = await fetch(`/api/cgc/observations${query}`, {
+        const res = await fetch("/api/cgc/observations", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...sasiAuthHeaders(token) },
           body: JSON.stringify({ message_id: activeActivityId, ...payload }),
         });
         if (!res.ok) return;
@@ -405,9 +371,9 @@ function AtividadesCgcPage() {
     );
 
     try {
-      const res = await fetch(`/api/cgc/observations${query}`, {
+      const res = await fetch("/api/cgc/observations", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...sasiAuthHeaders(token) },
         body: JSON.stringify({ id, ...snapshot }),
       });
       if (!res.ok) return;
@@ -437,9 +403,9 @@ function AtividadesCgcPage() {
     );
 
     try {
-      const res = await fetch(`/api/cgc/activities${query}`, {
+      const res = await fetch("/api/cgc/activities", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...sasiAuthHeaders(token) },
         // O histórico guarda o retrato da atividade: a mensagem vive na API
         // SASI e pode sair da janela de consulta depois.
         body: JSON.stringify({ id, status, ...activitySnapshot(activity, groupId) }),
@@ -459,73 +425,6 @@ function AtividadesCgcPage() {
       setStatusError("Não foi possível salvar o status. O valor anterior foi restaurado.");
     } finally {
       setSavingStatusId(null);
-    }
-  }
-
-  function openCreateModal() {
-    setEditingId(null);
-    setForm(EMPTY_GROUP_FORM);
-    setFormError(null);
-    setModalOpen(true);
-  }
-
-  function openEditModal(item: CgcGroup) {
-    setEditingId(item.id);
-    setForm({
-      name: item.name,
-      channel_ids: item.channel_ids || "",
-      data_field_value: item.data_field_value || "",
-      data_field_name: item.data_field_name || "",
-      category_ids: item.category_ids || "",
-      team_name: item.team_name || "",
-      app_ids: item.app_ids || "",
-    });
-    setFormError(null);
-    setModalOpen(true);
-  }
-
-  function closeModal() {
-    setModalOpen(false);
-    setEditingId(null);
-    setForm(EMPTY_GROUP_FORM);
-    setFormError(null);
-  }
-
-  async function saveGroup() {
-    if (!form.name.trim()) return;
-    setSaving(true);
-    setFormError(null);
-    try {
-      const res = await fetch(`/api/cgc/groups${query}`, {
-        method: editingId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editingId ? { id: editingId, ...form } : form),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error || "Falha ao salvar o grupo.");
-      }
-      closeModal();
-      await fetchGroups();
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Erro inesperado ao salvar o grupo.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function removeGroup(id: string) {
-    if (!confirm("Excluir este grupo? As atividades permanecem na API SASI.")) return;
-    setDeletingId(id);
-    try {
-      const res = await fetch(`/api/cgc/groups${query}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      if (res.ok) setGroups((prev) => prev.filter((item) => item.id !== id));
-    } finally {
-      setDeletingId(null);
     }
   }
 
@@ -552,7 +451,7 @@ function AtividadesCgcPage() {
           background: "#181C27", border: "1px solid #2A1A1A",
           borderRadius: 12, padding: "40px 48px", textAlign: "center", maxWidth: 400
         }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
+          <Lock size={36} color="#F87171" style={{ marginBottom: 16 }} />
           <h2 style={{ color: "#F87171", fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
             Acesso negado
           </h2>
@@ -575,35 +474,38 @@ function AtividadesCgcPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           {groupId && (
             <Link
-              href={hrefWithToken("/atividades-cgc")}
+              href="/atividades-cgc"
               style={{
                 color: "#7A82A0", fontSize: 13, textDecoration: "none",
-                padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045"
+                padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
+                display: "flex", alignItems: "center", gap: 6
               }}
             >
-              ← Grupos
+              <ArrowLeft size={14} /> Grupos
             </Link>
           )}
           <span style={{ color: "#E8EAF0", fontSize: 15, fontWeight: 600 }}>Atividades do CGC</span>
         </div>
         <div className="app-nav">
           <Link
-            href={hrefWithToken("/atividades-cgc/historico")}
+            href="/atividades-cgc/historico"
             style={{
               color: "#7A82A0", fontSize: 13, textDecoration: "none",
-              padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045"
+              padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
+              display: "flex", alignItems: "center", gap: 6
             }}
           >
-            📋 Histórico
+            <History size={14} /> Histórico
           </Link>
           <Link
-            href={hrefWithToken("/checklists")}
+            href="/checklists"
             style={{
               color: "#7A82A0", fontSize: 13, textDecoration: "none",
-              padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045"
+              padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
+              display: "flex", alignItems: "center", gap: 6
             }}
           >
-            Checklists
+            <ListFilter size={14} /> Checklists
           </Link>
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
@@ -624,85 +526,17 @@ function AtividadesCgcPage() {
     </header>
   );
 
-  const groupModal = modalOpen && (
-    <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "grid", placeItems: "center", padding: 20, zIndex: 1000 }}
-      onClick={(e) => e.target === e.currentTarget && closeModal()}
-    >
-      <div style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 12, padding: 24, width: "100%", maxWidth: 560, maxHeight: "90vh", overflow: "auto" }}>
-        <h2 style={{ margin: "0 0 6px", fontSize: 18, color: "#E8EAF0" }}>
-          {editingId ? "Editar grupo" : "Novo grupo"}
-        </h2>
-        <p style={{ margin: "0 0 18px", color: "#7A82A0", fontSize: 13, lineHeight: 1.5 }}>
-          O grupo define quais atividades da API SASI serão exibidas. O canal traz as mensagens; o valor
-          identificador separa o que é de cada grupo. Deixe um filtro em branco para não aplicá-lo.
-        </p>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#C8CAD6", marginBottom: 12 }}>
-          Nome do grupo
-          <input
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Ex.: Vigilância Sanitária"
-            style={{ background: "#181C27", border: "1px solid #2A3045", borderRadius: 8, padding: "10px 12px", color: "#E8EAF0", outline: "none" }}
-          />
-        </label>
-
-        {GROUP_FORM_FIELDS.map((field) => (
-          <label key={field.key} style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#C8CAD6", marginBottom: 12 }}>
-            {field.label}
-            <input
-              value={form[field.key]}
-              onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-              placeholder={field.hint}
-              style={{ background: "#181C27", border: "1px solid #2A3045", borderRadius: 8, padding: "10px 12px", color: "#E8EAF0", outline: "none" }}
-            />
-            <span style={{ color: "#4A5270", fontSize: 11 }}>{field.hint}</span>
-          </label>
-        ))}
-
-        {formError && <p style={{ color: "#F87171", fontSize: 13, margin: "12px 0 0" }}>{formError}</p>}
-
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>
-          <button onClick={closeModal} style={{ background: "transparent", border: "none", color: "#7A82A0", padding: "9px 12px", cursor: "pointer" }}>
-            Cancelar
-          </button>
-          <button
-            onClick={saveGroup}
-            disabled={!form.name.trim() || saving}
-            style={{
-              background: "#3B6EF5", border: "none", color: "white", borderRadius: 8,
-              padding: "9px 16px", fontWeight: 700,
-              cursor: !form.name.trim() || saving ? "not-allowed" : "pointer",
-              opacity: !form.name.trim() || saving ? 0.65 : 1
-            }}
-          >
-            {saving ? "Salvando..." : editingId ? "Salvar alterações" : "Criar grupo"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
   // --- Seleção de grupo -----------------------------------------------------
   if (!groupId) {
     return (
       <div style={{ background: "#0F1117", minHeight: "100vh" }}>
         {header}
         <main style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 20 }}>
-            <div>
-              <h1 style={{ color: "#E8EAF0", fontSize: 22, fontWeight: 700, margin: 0 }}>Selecione um grupo</h1>
-              <p style={{ color: "#7A82A0", fontSize: 13, marginTop: 4 }}>
-                Escolha o grupo responsável para visualizar as atividades recebidas da API SASI.
-              </p>
-            </div>
-            <button
-              onClick={openCreateModal}
-              style={{ background: "#3B6EF5", color: "white", border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 700, cursor: "pointer" }}
-            >
-              + Novo Grupo
-            </button>
+          <div style={{ marginBottom: 20 }}>
+            <h1 style={{ color: "#E8EAF0", fontSize: 22, fontWeight: 700, margin: 0 }}>Selecione um grupo</h1>
+            <p style={{ color: "#7A82A0", fontSize: 13, marginTop: 4 }}>
+              Escolha o grupo responsável para visualizar as atividades recebidas da API SASI.
+            </p>
           </div>
 
           {apiError && (
@@ -720,12 +554,16 @@ function AtividadesCgcPage() {
             </div>
           ) : (
             <div style={{ display: "grid", gap: 12 }}>
-              {groups.map((item) => {
-                const color = getCategoryColor(item.name);
+              {sortGroupsByDisplayOrder(groups).map((item) => {
+                const color = getCgcGroupColor(item.name);
                 const configured = Boolean(
                   item.channel_ids || item.data_field_value || item.category_ids ||
                   item.team_name || item.app_ids
                 );
+
+                const total = item.total ?? 0;
+                const concluded = item.concluded ?? 0;
+                const pct = total > 0 ? Math.round((concluded / total) * 100) : 0;
 
                 return (
                   <div
@@ -733,7 +571,7 @@ function AtividadesCgcPage() {
                     className="split-card"
                     style={{
                       background: "#181C27", border: "1px solid #2A3045", borderRadius: 10,
-                      padding: 18, borderLeft: `3px solid ${color}`
+                      padding: 18, borderLeft: `4px solid ${color}`
                     }}
                   >
                     <div style={{ minWidth: 0 }}>
@@ -743,33 +581,37 @@ function AtividadesCgcPage() {
                           Grupo ainda não configurado
                         </p>
                       ) : (
-                        <p style={{ margin: "6px 0 0", color: "#7A82A0", fontSize: 13 }}>
-                          {(item.concluded ?? 0) === 1
-                            ? "1 atividade concluída"
-                            : `${item.concluded ?? 0} atividades concluídas`}
-                        </p>
+                        <div style={{ marginTop: 12 }}>
+                          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+                            <div>
+                              <div style={{ color: "#E8EAF0", fontSize: 26, fontWeight: 800, lineHeight: 1 }}>{total}</div>
+                              <div style={{ color: "#7A82A0", fontSize: 11, marginTop: 4 }}>
+                                {total === 1 ? "atividade solicitada" : "atividades solicitadas"}
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ color: "#34D399", fontSize: 26, fontWeight: 800, lineHeight: 1 }}>{concluded}</div>
+                              <div style={{ color: "#7A82A0", fontSize: 11, marginTop: 4 }}>
+                                {concluded === 1 ? "atividade concluída" : "atividades concluídas"}
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
+                            <div style={{ height: 8, background: "#1E2333", borderRadius: 999, overflow: "hidden", width: 220, maxWidth: "100%" }}>
+                              <div style={{ width: `${pct}%`, height: "100%", background: "#34D399", borderRadius: 999, transition: "width 0.4s ease" }} />
+                            </div>
+                            <span style={{ color: "#E8EAF0", fontSize: 12, fontWeight: 700 }}>{pct}%</span>
+                          </div>
+                        </div>
                       )}
                     </div>
                     <div className="card-actions">
                       <Link
-                        href={hrefWithToken("/atividades-cgc", { grupo: item.id })}
-                        style={{ background: "#1E2333", border: "1px solid #3B6EF5", color: "#E8EAF0", borderRadius: 8, padding: "9px 14px", textDecoration: "none", fontSize: 13, fontWeight: 700 }}
+                        href={hrefWithParams("/atividades-cgc", { grupo: item.id })}
+                        style={{ background: "#1E2333", border: "1px solid #3B6EF5", color: "#E8EAF0", borderRadius: 8, padding: "9px 14px", textDecoration: "none", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}
                       >
-                        Abrir
+                        <ExternalLink size={14} /> Abrir
                       </Link>
-                      <button
-                        onClick={() => openEditModal(item)}
-                        style={{ background: "#3B82F6", border: "1px solid #3B6EF5", color: "#E8EAF0", borderRadius: 8, padding: "9px 12px", cursor: "pointer" }}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => removeGroup(item.id)}
-                        disabled={deletingId === item.id}
-                        style={{ background: "transparent", border: "1px solid #3A2430", color: "#F87171", borderRadius: 8, padding: "9px 12px", cursor: deletingId === item.id ? "not-allowed" : "pointer" }}
-                      >
-                        {deletingId === item.id ? "Excluindo..." : "Excluir"}
-                      </button>
                     </div>
                   </div>
                 );
@@ -777,7 +619,6 @@ function AtividadesCgcPage() {
             </div>
           )}
         </main>
-        {groupModal}
       </div>
     );
   }
@@ -808,53 +649,64 @@ function AtividadesCgcPage() {
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 24px" }}>
         {/* Visão geral */}
-        <div style={{ background: "#181C27", border: "1px solid #2A3045", borderRadius: 12, padding: 24, marginBottom: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
-            <div>
-              <h1 style={{ color: "#E8EAF0", fontSize: 22, fontWeight: 700, margin: 0 }}>
-                {group?.name || "Grupo selecionado"}
-              </h1>
-              <p style={{ color: "#7A82A0", fontSize: 13, marginTop: 4 }}>
-                {total ?? stats.total} atividades · {stats.done} concluídas
-                {lastSync && (
-                  <span style={{ color: "#4A5270" }}> · sincronizado {formatClock(lastSync)}</span>
-                )}
-              </p>
+        <div style={{
+          background: "#181C27", border: "1px solid #2A3045", borderLeft: `4px solid ${getCgcGroupColor(group?.name)}`,
+          borderRadius: 12, padding: 24, marginBottom: 24
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+              <div style={{ textAlign: "center", flexShrink: 0 }}>
+                <div style={{ color: "#E8EAF0", fontSize: 36, fontWeight: 800, lineHeight: 1 }}>{completionPct}%</div>
+                <div style={{ color: "#4A5270", fontSize: 11, marginTop: 4 }}>concluído</div>
+              </div>
+              <div>
+                <h1 style={{ color: "#E8EAF0", fontSize: 22, fontWeight: 700, margin: 0 }}>
+                  {group?.name || "Grupo selecionado"}
+                </h1>
+                <p style={{ color: "#7A82A0", fontSize: 13, marginTop: 4 }}>
+                  {total ?? stats.total} atividades
+                  {lastSync && (
+                    <span style={{ color: "#4A5270" }}> · sincronizado {formatClock(lastSync)}</span>
+                  )}
+                </p>
+              </div>
             </div>
-            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-              {[
-                { label: "Concluídas", value: stats.done, color: "#34D399" },
-                { label: "Em andamento", value: stats.inProgress, color: "#60A5FA" },
-                { label: "Não iniciadas", value: notStarted, color: "#F87171" },
-              ].map((stat) => (
-                <div key={stat.label} style={{ textAlign: "center" }}>
-                  <div style={{ color: stat.color, fontSize: 24, fontWeight: 700, lineHeight: 1 }}>{stat.value}</div>
-                  <div style={{ color: "#4A5270", fontSize: 11, marginTop: 4 }}>{stat.label}</div>
-                </div>
-              ))}
-              <button
-                onClick={() => fetchActivities({ showIndicator: true })}
-                disabled={refreshing}
-                style={{
-                  background: "transparent", border: "1px solid #2A3045", color: "#7A82A0",
-                  borderRadius: 6, padding: "8px 14px", fontSize: 13,
-                  cursor: refreshing ? "not-allowed" : "pointer"
-                }}
-              >
-                {refreshing ? "Atualizando..." : "Atualizar"}
-              </button>
-            </div>
+            <button
+              onClick={() => fetchActivities({ showIndicator: true })}
+              disabled={refreshing}
+              style={{
+                background: "transparent", border: "1px solid #2A3045", color: "#7A82A0",
+                borderRadius: 6, padding: "8px 14px", fontSize: 13,
+                cursor: refreshing ? "not-allowed" : "pointer",
+                display: "flex", alignItems: "center", gap: 6
+              }}
+            >
+              <RefreshCw size={14} className={refreshing ? "spin-icon" : undefined} /> {refreshing ? "Atualizando..." : "Atualizar"}
+            </button>
           </div>
 
-          <div style={{ marginTop: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <span style={{ color: "#7A82A0", fontSize: 12 }}>Progresso da página</span>
-              <span style={{ color: "#E8EAF0", fontSize: 12, fontWeight: 600 }}>{completionPct}%</span>
-            </div>
-            <div style={{ background: "#1E2333", borderRadius: 4, height: 6, overflow: "hidden", display: "flex" }}>
-              <div style={{ height: "100%", width: `${notStartedPct}%`, background: getStatusColor("NAO_INICIADO"), borderRadius: "4px 0 0 4px", transition: "width 0.5s ease" }} />
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20 }}>
+            {[
+              { label: "Concluídas", value: stats.done, color: "#34D399" },
+              { label: "Em andamento", value: stats.inProgress, color: "#60A5FA" },
+              { label: "Não iniciadas", value: notStarted, color: "#F87171" },
+              { label: "Impedidas", value: stats.blocked, color: "#FBBF24" },
+            ].map((stat) => (
+              <div key={stat.label} style={{
+                flex: "1 1 120px", background: "#1E2333", border: "1px solid #2A3045",
+                borderRadius: 10, padding: "12px 16px"
+              }}>
+                <div style={{ color: stat.color, fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{stat.value}</div>
+                <div style={{ color: "#7A82A0", fontSize: 12, marginTop: 4 }}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 18 }}>
+            <div style={{ background: "#1E2333", borderRadius: 999, height: 10, overflow: "hidden", display: "flex" }}>
+              <div style={{ height: "100%", width: `${notStartedPct}%`, background: getStatusColor("NAO_INICIADO"), transition: "width 0.5s ease" }} />
               <div style={{ height: "100%", width: `${inProgressPct}%`, background: getStatusColor("EM_ANDAMENTO"), transition: "width 0.5s ease" }} />
-              <div style={{ height: "100%", width: `${donePct}%`, background: getStatusColor("CONCLUIDO"), borderRadius: "0 4px 4px 0", transition: "width 0.5s ease" }} />
+              <div style={{ height: "100%", width: `${donePct}%`, background: getStatusColor("CONCLUIDO"), transition: "width 0.5s ease" }} />
             </div>
           </div>
         </div>
@@ -873,7 +725,7 @@ function AtividadesCgcPage() {
                 fontSize: 13, outline: "none"
               }}
             />
-            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#4A5270", fontSize: 14 }}>🔍</span>
+            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#4A5270" }} />
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {["TODOS", "NAO_INICIADO", "EM_ANDAMENTO", "CONCLUIDO"].map((value) => {
@@ -907,9 +759,9 @@ function AtividadesCgcPage() {
             <button
               onClick={() => fetchActivities({ showIndicator: true })}
               disabled={refreshing}
-              style={{ background: "#3B6EF5", border: "none", color: "white", borderRadius: 8, padding: "9px 16px", fontWeight: 700, cursor: refreshing ? "not-allowed" : "pointer" }}
+              style={{ background: "#3B6EF5", border: "none", color: "white", borderRadius: 8, padding: "9px 16px", fontWeight: 700, cursor: refreshing ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
             >
-              {refreshing ? "Tentando..." : "Tentar novamente"}
+              <RefreshCw size={14} className={refreshing ? "spin-icon" : undefined} /> {refreshing ? "Tentando..." : "Tentar novamente"}
             </button>
           </div>
         )}
@@ -950,7 +802,7 @@ function AtividadesCgcPage() {
           </div>
         ) : (
           Object.entries(grouped).map(([category, items]) => {
-            const catColor = getCategoryColor(category);
+            const catColor = getCgcGroupColor(group?.name);
             const catStats = getStats(items);
             return (
               <div key={category} style={{ marginBottom: 20 }}>
@@ -1009,24 +861,40 @@ function AtividadesCgcPage() {
                             </p>
 
                             {activity.fields.length > 0 && (
-                              <div style={{ display: "grid", gap: 4, marginTop: 8 }}>
-                                {activity.fields.map((field) => (
-                                  <div key={`${activity.id}-${field.name ?? field.title}`} className="field-row">
-                                    <span style={{ color: "#4A5270", fontSize: 11, fontWeight: 500, wordBreak: "break-word" }}>
-                                      {field.title || field.name}
-                                    </span>
-                                    <span style={{ color: "#C8CAD6", fontSize: 12, lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                                      {field.value}
-                                    </span>
+                              <>
+                                <button
+                                  onClick={() => toggleFields(activity.id)}
+                                  style={{
+                                    background: "transparent", border: "none", padding: 0, marginTop: 8,
+                                    color: "#60A5FA", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                                    display: "inline-flex", alignItems: "center", gap: 4
+                                  }}
+                                >
+                                  {expandedFieldIds.has(activity.id)
+                                    ? (<><ChevronUp size={12} /> Ocultar detalhes</>)
+                                    : (<><ChevronDown size={12} /> Ver detalhes ({activity.fields.length})</>)}
+                                </button>
+                                {expandedFieldIds.has(activity.id) && (
+                                  <div style={{ display: "grid", gap: 4, marginTop: 8 }}>
+                                    {activity.fields.map((field) => (
+                                      <div key={`${activity.id}-${field.name ?? field.title}`} className="field-row">
+                                        <span style={{ color: "#4A5270", fontSize: 11, fontWeight: 500, wordBreak: "break-word" }}>
+                                          {field.title || field.name}
+                                        </span>
+                                        <span style={{ color: "#C8CAD6", fontSize: 12, lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                          {field.value}
+                                        </span>
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
-                              </div>
+                                )}
+                              </>
                             )}
 
                             {(observationsByActivity[activity.id] || []).map((note) => (
                               <div key={note.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, marginTop: 4 }}>
-                                <p style={{ color: "#4A5270", fontSize: 12, margin: 0, fontStyle: "italic", flex: 1, minWidth: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.5 }}>
-                                  💬 {note.text}
+                                <p style={{ color: "#4A5270", fontSize: 12, margin: 0, fontStyle: "italic", flex: 1, minWidth: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.5, display: "flex", alignItems: "flex-start", gap: 5 }}>
+                                  <MessageSquare size={12} style={{ flexShrink: 0, marginTop: 2 }} /> {note.text}
                                 </p>
                                 <button
                                   onClick={() => {
@@ -1035,16 +903,16 @@ function AtividadesCgcPage() {
                                     setObsValue(note.text);
                                   }}
                                   title="Editar comentário"
-                                  style={{ background: "transparent", border: "none", padding: 4, cursor: "pointer", color: "#60A5FA", fontSize: 12 }}
+                                  style={{ background: "transparent", border: "none", padding: 4, cursor: "pointer", color: "#60A5FA", display: "flex" }}
                                 >
-                                  ✏️
+                                  <Pencil size={12} />
                                 </button>
                                 <button
                                   onClick={() => deleteObs(note.id)}
                                   title="Apagar comentário"
-                                  style={{ background: "transparent", border: "none", padding: 4, cursor: "pointer", color: "#F87171", fontSize: 12 }}
+                                  style={{ background: "transparent", border: "none", padding: 4, cursor: "pointer", color: "#F87171", display: "flex" }}
                                 >
-                                  ✕
+                                  <X size={12} />
                                 </button>
                               </div>
                             ))}
@@ -1097,12 +965,11 @@ function AtividadesCgcPage() {
                               title="Novo comentário"
                               style={{
                                 background: "transparent", border: "1px solid #2A3045",
-                                borderRadius: 6, padding: "5px 8px", cursor: "pointer",
-                                color: (observationsByActivity[activity.id] || []).length > 0 ? "#60A5FA" : "#4A5270",
-                                fontSize: 13
+                                borderRadius: 6, padding: "5px 8px", cursor: "pointer", display: "flex",
+                                color: (observationsByActivity[activity.id] || []).length > 0 ? "#60A5FA" : "#4A5270"
                               }}
                             >
-                              💬
+                              <MessageSquare size={14} />
                             </button>
 
                             {isSavingThis && (
@@ -1166,9 +1033,12 @@ function AtividadesCgcPage() {
             background: "#1E2333", border: "1px solid #2A3045",
             borderRadius: 12, padding: 24, width: "100%", maxWidth: 480
           }}>
-            <h3 style={{ color: "#E8EAF0", fontSize: 16, fontWeight: 600, margin: "0 0 16px" }}>
-              {editingNoteId ? "Editar comentário" : "Novo comentário"}
+            <h3 style={{ color: "#E8EAF0", fontSize: 16, fontWeight: 600, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
+              <MessageSquare size={16} /> {editingNoteId ? "Editar comentário" : "Novo comentário"}
             </h3>
+            <p style={{ color: "#7A82A0", fontSize: 12, margin: "0 0 16px" }}>
+              Visível só nesta tela, junto do histórico da atividade.
+            </p>
             <textarea
               value={obsValue}
               onChange={(e) => setObsValue(e.target.value)}
@@ -1211,7 +1081,7 @@ function AtividadesCgcPage() {
         </div>
       )}
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } } .spin-icon { animation: spin 0.8s linear infinite; }`}</style>
     </div>
   );
 }

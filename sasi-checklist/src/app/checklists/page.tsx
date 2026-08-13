@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { readSasiToken, sasiTokenQuery } from "@/lib/token";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { sasiAuthHeaders } from "@/lib/token";
+import { useSasiToken } from "@/hooks/useSasiToken";
+import { getStatusColor } from "@/lib/checklist-status";
 import * as XLSX from "xlsx";
+import { Lock, RefreshCw, Plus, ExternalLink, Pencil, Trash2, Upload } from "lucide-react";
 
 interface ChecklistSummary {
   id: string;
@@ -51,6 +53,13 @@ function formatDate(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+/** Cor da barra de progresso por faixa, reaproveitando a paleta de status do checklist. */
+function progressColor(pct: number) {
+  if (pct >= 70) return getStatusColor("CONCLUIDO");
+  if (pct >= 34) return getStatusColor("EM_ANDAMENTO");
+  return getStatusColor("NAO_INICIADO");
 }
 
 function normalizeHeader(value: unknown) {
@@ -143,9 +152,7 @@ function parseCsvRows(text: string) {
 }
 
 function ChecklistsPage() {
-  const searchParams = useSearchParams();
-  // Token só é aceito em `sasi-token`; qualquer outra forma é usuário sem acesso.
-  const token = readSasiToken(searchParams);
+  const token = useSasiToken();
 
   const [checklists, setChecklists] = useState<ChecklistSummary[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -169,9 +176,7 @@ function ChecklistsPage() {
   const [selectedResponsibleColumn, setSelectedResponsibleColumn] = useState<number | null>(null);
   const [selectedObservationColumn, setSelectedObservationColumn] = useState<number | null>(null);
 
-  const query = useMemo(() => sasiTokenQuery(token), [token]);
-
-  const listHref = `/checklists${query}`;
+  const listHref = "/checklists";
 
   const fetchChecklists = useCallback(async () => {
     if (!token) {
@@ -181,7 +186,7 @@ function ChecklistsPage() {
     }
 
     try {
-      const res = await fetch(`/api/checklists${query}`);
+      const res = await fetch("/api/checklists", { headers: sasiAuthHeaders(token) });
       if (!res.ok) {
         setAuthError(true);
         return;
@@ -194,7 +199,7 @@ function ChecklistsPage() {
     } finally {
       setLoading(false);
     }
-  }, [query, token]);
+  }, [token]);
 
   useEffect(() => {
     fetchChecklists();
@@ -274,9 +279,9 @@ function ChecklistsPage() {
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/checklists${query}`, {
+      const res = await fetch("/api/checklists", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...sasiAuthHeaders(token) },
         body: JSON.stringify({ title: title.trim(), activities: parsedActivities }),
       });
       if (!res.ok) {
@@ -301,9 +306,9 @@ function ChecklistsPage() {
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/checklists${query}`, {
+      const res = await fetch("/api/checklists", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...sasiAuthHeaders(token) },
         body: JSON.stringify({ id: editingChecklistId, title: editingChecklistTitle.trim() }),
       });
       if (!res.ok) {
@@ -357,9 +362,9 @@ function ChecklistsPage() {
 
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/checklists${query}`, {
+      const res = await fetch("/api/checklists", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...sasiAuthHeaders(token) },
         body: JSON.stringify({ id }),
       });
       if (res.ok) {
@@ -378,12 +383,19 @@ function ChecklistsPage() {
     );
   }
 
+  const totalActivities = checklists.reduce((sum, c) => sum + c.activity_count, 0);
+  const totalCompleted = checklists.reduce((sum, c) => sum + c.completed_count, 0);
+  const avgProgress = checklists.length > 0
+    ? Math.round(checklists.reduce((sum, c) => sum + c.progress, 0) / checklists.length)
+    : 0;
+
   if (authError || !user) {
     return (
       <div style={{ background: "#0F1117", minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
         <div style={{ background: "#181C27", border: "1px solid #2A1A1A", borderRadius: 12, padding: 32, maxWidth: 420, textAlign: "center" }}>
+          <Lock size={36} color="#F87171" style={{ marginBottom: 16 }} />
           <h1 style={{ color: "#F87171", fontSize: 20, margin: "0 0 8px" }}>Acesso negado</h1>
-          <p style={{ color: "#7A82A0", fontSize: 14, margin: 0 }}>Token invalido ou nao informado.</p>
+          <p style={{ color: "#7A82A0", fontSize: 14, margin: 0 }}>Token inválido ou não informado.</p>
         </div>
       </div>
     );
@@ -398,12 +410,14 @@ function ChecklistsPage() {
             <p style={{ margin: "4px 0 0", color: "#7A82A0", fontSize: 13 }}>Selecione ou importe uma planilha de atividades</p>
           </div>
           <div className="app-nav">
-            <Link href={listHref} style={{ color: "#7A82A0", fontSize: 13, textDecoration: "none" }}>Atualizar</Link>
+            <Link href={listHref} style={{ color: "#7A82A0", fontSize: 13, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
+              <RefreshCw size={14} /> Atualizar
+            </Link>
             <button
               onClick={openCreateModal}
-              style={{ background: "#3B6EF5", color: "white", border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 700, cursor: "pointer" }}
+              style={{ background: "#3B6EF5", color: "white", border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
             >
-              + Novo Checklist
+              <Plus size={16} /> Novo Checklist
             </button>
             <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>{user.name}</span>
           </div>
@@ -411,6 +425,29 @@ function ChecklistsPage() {
       </header>
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
+        {checklists.length > 0 && (
+          <div style={{
+            background: "#181C27", border: "1px solid #2A3045", borderLeft: "4px solid #3B6EF5",
+            borderRadius: 12, padding: 24, marginBottom: 20,
+            display: "flex", gap: 10, flexWrap: "wrap"
+          }}>
+            {[
+              { label: "Checklists", value: checklists.length, color: "#60A5FA" },
+              { label: "Atividades", value: totalActivities, color: "#7A82A0" },
+              { label: "Concluídas", value: totalCompleted, color: "#34D399" },
+              { label: "Progresso médio", value: `${avgProgress}%`, color: progressColor(avgProgress) },
+            ].map((stat) => (
+              <div key={stat.label} style={{
+                flex: "1 1 140px", background: "#1E2333", border: "1px solid #2A3045",
+                borderRadius: 10, padding: "12px 16px"
+              }}>
+                <div style={{ color: stat.color, fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{stat.value}</div>
+                <div style={{ color: "#7A82A0", fontSize: 12, marginTop: 4 }}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {checklists.length === 0 ? (
           <div style={{ background: "#181C27", border: "1px solid #2A3045", borderRadius: 12, padding: 40, textAlign: "center" }}>
             <h2 style={{ margin: "0 0 8px", fontSize: 18 }}>Nenhum checklist cadastrado</h2>
@@ -419,41 +456,54 @@ function ChecklistsPage() {
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
             {checklists.map((checklist) => (
-              <div key={checklist.id} className="split-card" style={{ background: "#181C27", border: "1px solid #2A3045", borderRadius: 10, padding: 18 }}>
-                <div>
-                  <h2 style={{ margin: "0 0 8px", fontSize: 16 }}>{checklist.title}</h2>
-                  <div style={{ color: "#7A82A0", fontSize: 13, display: "flex", gap: 14, flexWrap: "wrap" }}>
-                    <span>{formatDate(checklist.created_at)}</span>
-                    <span>{checklist.created_by_name || "Sem autor"}</span>
-                    <span>{checklist.activity_count} atividades</span>
-                    <span>{checklist.completed_count} concluidas</span>
+              <div
+                key={checklist.id}
+                className="split-card"
+                style={{
+                  background: "#181C27", border: "1px solid #2A3045",
+                  borderLeft: `3px solid ${progressColor(checklist.progress)}`,
+                  borderRadius: 10, padding: 18
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <h2 style={{ margin: "0 0 10px", fontSize: 17, fontWeight: 700 }}>{checklist.title}</h2>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#7A82A0", fontSize: 12 }}>
+                      {formatDate(checklist.created_at)}
+                    </span>
+                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#7A82A0", fontSize: 12 }}>
+                      {checklist.created_by_name || "Sem autor"}
+                    </span>
+                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#7A82A0", fontSize: 12 }}>
+                      {checklist.completed_count}/{checklist.activity_count} atividades
+                    </span>
                   </div>
-                  <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ height: 6, background: "#1E2333", borderRadius: 999, overflow: "hidden", width: 220, maxWidth: "100%" }}>
-                      <div style={{ width: `${checklist.progress}%`, height: "100%", background: "#10B981" }} />
+                  <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ height: 8, background: "#1E2333", borderRadius: 999, overflow: "hidden", width: 220, maxWidth: "100%" }}>
+                      <div style={{ width: `${checklist.progress}%`, height: "100%", background: progressColor(checklist.progress), borderRadius: 999, transition: "width 0.4s ease" }} />
                     </div>
-                    <span style={{ color: "#C8CAD6", fontSize: 12, fontWeight: 700 }}>{checklist.progress}%</span>
+                    <span style={{ color: "#E8EAF0", fontSize: 13, fontWeight: 700 }}>{checklist.progress}%</span>
                   </div>
                 </div>
                 <div className="card-actions">
                   <Link
-                    href={token ? `/${query}&checklist=${encodeURIComponent(checklist.id)}` : `/?checklist=${encodeURIComponent(checklist.id)}`}
-                    style={{ background: "#1E2333", border: "1px solid #3B6EF5", color: "#E8EAF0", borderRadius: 8, padding: "9px 14px", textDecoration: "none", fontSize: 13, fontWeight: 700 }}
+                    href={`/?checklist=${encodeURIComponent(checklist.id)}`}
+                    style={{ background: "#1E2333", border: "1px solid #3B6EF5", color: "#E8EAF0", borderRadius: 8, padding: "9px 14px", textDecoration: "none", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}
                   >
-                    Abrir
+                    <ExternalLink size={14} /> Abrir
                   </Link>
                   <button
                     onClick={() => openEditModal(checklist)}
-                    style={{ background: "#3B82F6", border: "1px solid #3B6EF5", color: "#E8EAF0", borderRadius: 8, padding: "9px 12px", cursor: "pointer" }}
+                    style={{ background: "#3B82F6", border: "1px solid #3B6EF5", color: "#E8EAF0", borderRadius: 8, padding: "9px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
                   >
-                    Editar
+                    <Pencil size={14} /> Editar
                   </button>
                   <button
                     onClick={() => deleteChecklist(checklist.id)}
                     disabled={deletingId === checklist.id}
-                    style={{ background: "transparent", border: "1px solid #3A2430", color: "#F87171", borderRadius: 8, padding: "9px 12px", cursor: deletingId === checklist.id ? "not-allowed" : "pointer" }}
+                    style={{ background: "transparent", border: "1px solid #3A2430", color: "#F87171", borderRadius: 8, padding: "9px 12px", cursor: deletingId === checklist.id ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
                   >
-                    {deletingId === checklist.id ? "Excluindo..." : "Excluir"}
+                    <Trash2 size={14} /> {deletingId === checklist.id ? "Excluindo..." : "Excluir"}
                   </button>
                 </div>
               </div>
@@ -465,20 +515,27 @@ function ChecklistsPage() {
       {modalOpen && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "grid", placeItems: "center", padding: 20, zIndex: 1000 }} onClick={(e) => e.target === e.currentTarget && closeModal()}>
           <div style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 12, padding: 24, width: "100%", maxWidth: 760, maxHeight: "90vh", overflow: "auto" }}>
-            <h2 style={{ margin: "0 0 16px", fontSize: 18 }}>{editorMode === 'edit' ? 'Editar Checklist' : 'Novo Checklist'}</h2>
-            <label style={{ color: "#C8CAD6", fontSize: 13, display: "block", marginBottom: 8 }}>Titulo</label>
-            <input
-              value={editorMode === 'edit' ? editingChecklistTitle : title}
-              onChange={(e) => (editorMode === 'edit' ? setEditingChecklistTitle(e.target.value) : setTitle(e.target.value))}
-              placeholder="Ex.: Checklist de abandono de area"
-              style={{ width: "100%", background: "#181C27", border: "1px solid #2A3045", borderRadius: 8, padding: "10px 12px", color: "#E8EAF0", outline: "none" }}
-            />
+            <h2 style={{ margin: "0 0 4px", fontSize: 18 }}>{editorMode === 'edit' ? 'Editar checklist' : 'Novo checklist'}</h2>
+            <p style={{ margin: "0 0 18px", color: "#7A82A0", fontSize: 13 }}>
+              {editorMode === 'edit' ? 'Altere o título deste checklist.' : 'Crie um checklist vazio ou importe as atividades de uma planilha.'}
+            </p>
+            <label style={{ color: "#C8CAD6", fontSize: 13, display: "flex", flexDirection: "column", gap: 6 }}>
+              Título
+              <input
+                value={editorMode === 'edit' ? editingChecklistTitle : title}
+                onChange={(e) => (editorMode === 'edit' ? setEditingChecklistTitle(e.target.value) : setTitle(e.target.value))}
+                placeholder="Ex.: Checklist de abandono de área"
+                style={{ width: "100%", background: "#181C27", border: "1px solid #2A3045", borderRadius: 8, padding: "10px 12px", color: "#E8EAF0", outline: "none" }}
+              />
+            </label>
 
             {editorMode === 'create' && (
               <div style={{ marginTop: 18, background: "#181C27", border: "1px solid #2A3045", borderRadius: 10, padding: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
                   <div>
-                    <strong style={{ fontSize: 14 }}>Importar planilha</strong>
+                    <strong style={{ fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
+                      <Upload size={14} /> Importar planilha
+                    </strong>
                     <p style={{ margin: "4px 0 0", color: "#7A82A0", fontSize: 13 }}>Selecione quais colunas devem ser importadas. Use &quot;Não importar&quot; para ignorar colunas opcionais.</p>
                   </div>
                   <input type="file" accept="*/*" onChange={(e) => handleFile(e.target.files?.[0] || null)} style={{ color: "#C8CAD6", fontSize: 13 }} />

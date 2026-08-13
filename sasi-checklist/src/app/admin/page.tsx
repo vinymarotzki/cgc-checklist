@@ -3,7 +3,9 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { TOKEN_PARAM, readSasiToken } from '@/lib/token';
+import { sasiAuthHeaders } from '@/lib/token';
+import { useSasiToken } from '@/hooks/useSasiToken';
+import { Lock, ArrowLeft, History, Plus, Trash2 } from 'lucide-react';
 
 interface Activity {
   id: string;
@@ -35,8 +37,7 @@ function groupByCategory(activities: Activity[]) {
 
 function AdminPageContent() {
   const searchParams = useSearchParams();
-  // Token só é aceito em `sasi-token`; qualquer outra forma é usuário sem acesso.
-  const token = readSasiToken(searchParams);
+  const token = useSasiToken();
   const checklistId = searchParams.get('checklist') || '';
   const [activities, setActivities] = useState<Activity[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -55,11 +56,8 @@ function AdminPageContent() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const buildQuery = useCallback(() => {
-    const params = new URLSearchParams();
-    if (token) params.set(TOKEN_PARAM, token);
-    if (checklistId) params.set('checklist', checklistId);
-    return params.toString() ? `?${params.toString()}` : '';
-  }, [token, checklistId]);
+    return checklistId ? `?checklist=${encodeURIComponent(checklistId)}` : '';
+  }, [checklistId]);
 
   const fetchActivities = useCallback(async () => {
     if (!token) {
@@ -70,7 +68,7 @@ function AdminPageContent() {
 
     try {
       const query = buildQuery();
-      const res = await fetch(`/api/activities${query}`);
+      const res = await fetch(`/api/activities${query}`, { headers: sasiAuthHeaders(token) });
       if (!res.ok) {
         setAuthError(true);
         setLoading(false);
@@ -99,7 +97,7 @@ function AdminPageContent() {
       const query = buildQuery();
       const res = await fetch(`/api/activities${query}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...sasiAuthHeaders(token) },
         body: JSON.stringify({ id, ...payload }),
       });
       if (!res.ok) {
@@ -129,7 +127,7 @@ function AdminPageContent() {
       const query = buildQuery();
       const res = await fetch(`/api/activities${query}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...sasiAuthHeaders(token) },
         body: JSON.stringify({ oldCategory, category: trimmed }),
       });
       if (!res.ok) {
@@ -157,7 +155,7 @@ function AdminPageContent() {
       const query = buildQuery();
       const res = await fetch(`/api/activities${query}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...sasiAuthHeaders(token) },
         body: JSON.stringify({ category: trimmedCategory, activity: trimmedActivity }),
       });
       if (!res.ok) {
@@ -184,7 +182,7 @@ function AdminPageContent() {
       const query = buildQuery();
       const res = await fetch(`/api/activities${query}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...sasiAuthHeaders(token) },
         body: JSON.stringify({ category: trimmed, activity: 'Nova atividade' }),
       });
       if (!res.ok) {
@@ -208,7 +206,7 @@ function AdminPageContent() {
       const query = buildQuery();
       const res = await fetch(`/api/activities${query}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...sasiAuthHeaders(token) },
         body: JSON.stringify({ id }),
       });
       if (!res.ok) {
@@ -231,7 +229,7 @@ function AdminPageContent() {
       const query = buildQuery();
       const res = await fetch(`/api/activities${query}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...sasiAuthHeaders(token) },
         body: JSON.stringify({ category }),
       });
       if (!res.ok) {
@@ -264,7 +262,7 @@ function AdminPageContent() {
     return (
       <div style={{ minHeight: '100vh', background: '#0F1117', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ maxWidth: 420, background: '#181C27', border: '1px solid #2A3045', borderRadius: 16, padding: 32, textAlign: 'center' }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>🔐</div>
+          <Lock size={32} color="#F87171" style={{ marginBottom: 12 }} />
           <h1 style={{ color: '#E8EAF0', fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Acesso negado</h1>
           <p style={{ color: '#7A82A0', fontSize: 14, lineHeight: 1.6 }}>Informe um token válido para acessar o painel administrativo.</p>
         </div>
@@ -273,7 +271,7 @@ function AdminPageContent() {
   }
 
   if (!checklistId) {
-    const checklistsHref = token ? `/checklists?token=${encodeURIComponent(token)}` : '/checklists';
+    const checklistsHref = '/checklists';
     return (
       <div style={{ minHeight: '100vh', background: '#0F1117', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ maxWidth: 460, background: '#181C27', border: '1px solid #2A3045', borderRadius: 16, padding: 32, textAlign: 'center' }}>
@@ -287,22 +285,20 @@ function AdminPageContent() {
     );
   }
 
-  const checklistHref = token
-    ? `/?token=${encodeURIComponent(token)}&checklist=${encodeURIComponent(checklistId)}`
-    : `/?checklist=${encodeURIComponent(checklistId)}`;
-  const checklistsHref = token ? `/checklists?token=${encodeURIComponent(token)}` : '/checklists';
-  const historyHref = token ? `/history?token=${encodeURIComponent(token)}` : '/history';
+  const checklistHref = `/?checklist=${encodeURIComponent(checklistId)}`;
+  const checklistsHref = '/checklists';
+  const historyHref = '/history';
 
   return (
     <div style={{ minHeight: '100vh', background: '#0F1117', color: '#E8EAF0' }}>
       <header className="app-header">
         <div className="app-header-inner">
           <div className="app-nav">
-            <Link href={checklistHref} style={{ color: '#7A82A0', textDecoration: 'none', fontSize: 14 }}>
-              ← Checklist
+            <Link href={checklistHref} style={{ color: '#7A82A0', textDecoration: 'none', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ArrowLeft size={14} /> Checklist
             </Link>
-            <Link href={historyHref} style={{ color: '#7A82A0', textDecoration: 'none', fontSize: 14 }}>
-              Histórico
+            <Link href={historyHref} style={{ color: '#7A82A0', textDecoration: 'none', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <History size={14} /> Histórico
             </Link>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -325,9 +321,9 @@ function AdminPageContent() {
                 setCreatingCategory(true);
                 setNewCategoryDraft('');
               }}
-              style={{ border: 'none', borderRadius: 10, background: '#3B6EF5', color: '#fff', padding: '10px 14px', cursor: 'pointer', fontWeight: 700 }}
+              style={{ border: 'none', borderRadius: 10, background: '#3B6EF5', color: '#fff', padding: '10px 14px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}
             >
-              + Nova Categoria
+              <Plus size={16} /> Nova Categoria
             </button>
           </div>
 
@@ -397,11 +393,11 @@ function AdminPageContent() {
                     <span style={{ color: '#7A82A0', fontSize: 13 }}>({items.length})</span>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => { setAddingActivityForCategory(category); setNewActivityDraft(''); }} style={{ padding: '8px 10px', borderRadius: 8, background: '#1E2333', border: '1px solid #2A3045', color: '#E8EAF0', cursor: 'pointer' }}>
-                      + Adicionar
+                    <button onClick={() => { setAddingActivityForCategory(category); setNewActivityDraft(''); }} style={{ padding: '8px 10px', borderRadius: 8, background: '#1E2333', border: '1px solid #2A3045', color: '#E8EAF0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Plus size={14} /> Adicionar
                     </button>
-                    <button onClick={() => setConfirmModal({ type: 'category', category })} style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', border: '1px solid #2A3045', color: '#F87171', cursor: 'pointer' }}>
-                      Excluir categoria
+                    <button onClick={() => setConfirmModal({ type: 'category', category })} style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', border: '1px solid #2A3045', color: '#F87171', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Trash2 size={14} /> Excluir categoria
                     </button>
                   </div>
                 </div>
@@ -468,8 +464,8 @@ function AdminPageContent() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={{ color: '#7A82A0', fontSize: 12 }}>{activity.status}</span>
-                          <button onClick={() => setConfirmModal({ type: 'activity', id: activity.id })} style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', border: '1px solid #2A3045', color: '#F87171', cursor: 'pointer' }}>
-                            Excluir
+                          <button onClick={() => setConfirmModal({ type: 'activity', id: activity.id })} style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', border: '1px solid #2A3045', color: '#F87171', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Trash2 size={14} /> Excluir
                           </button>
                         </div>
                       </div>

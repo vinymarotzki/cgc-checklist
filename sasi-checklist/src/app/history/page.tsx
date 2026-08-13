@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
-import { readSasiToken, sasiTokenQuery } from "@/lib/token";
+import { sasiAuthHeaders } from "@/lib/token";
+import { useSasiToken } from "@/hooks/useSasiToken";
 import Link from "next/link";
 import { Suspense } from "react";
 import * as XLSX from "xlsx";
 import { STATUS_LABELS, getStatusColor, getStatusPillStyle } from "@/lib/checklist-status";
+import {
+  Lock, Search, ArrowLeft, MessageSquare, Pencil, Trash2, RefreshCw, FileText,
+  ChevronDown, ChevronUp, Download, type LucideIcon,
+} from "lucide-react";
 
 interface HistoryEntry {
   id: string;
@@ -47,10 +51,10 @@ interface User {
   name: string;
 }
 
-const OBSERVATION_EVENT_PREFIXES = [
-  { prefix: "Observação adicionada:", label: "Observação criada", color: "#60A5FA", icon: "💬" },
-  { prefix: "Observação editada:", label: "Observação editada", color: "#F59E0B", icon: "✏️" },
-  { prefix: "Observação apagada:", label: "Observação apagada", color: "#F87171", icon: "🗑️" },
+const OBSERVATION_EVENT_PREFIXES: { prefix: string; label: string; color: string; icon: LucideIcon }[] = [
+  { prefix: "Observação adicionada:", label: "Observação criada", color: "#60A5FA", icon: MessageSquare },
+  { prefix: "Observação editada:", label: "Observação editada", color: "#F59E0B", icon: Pencil },
+  { prefix: "Observação apagada:", label: "Observação apagada", color: "#F87171", icon: Trash2 },
 ];
 
 function getObservationEvent(observation: string | null) {
@@ -72,7 +76,7 @@ function describeEntry(entry: HistoryEntry) {
   return {
     label: statusChanged ? "Status alterado" : "Registro",
     color: getStatusColor(entry.new_status || "SEM_STATUS"),
-    icon: statusChanged ? "🔄" : "📝",
+    icon: statusChanged ? RefreshCw : FileText,
     text,
     statusChanged,
   };
@@ -238,10 +242,7 @@ function exportChecklistXlsx(checklist: CompletedChecklistEntry, items: Complete
 }
 
 function HistoryPage() {
-  const searchParams = useSearchParams();
-  // Token só é aceito em `sasi-token`; qualquer outra forma é usuário sem acesso.
-  const token = readSasiToken(searchParams);
-  const authQuery = sasiTokenQuery(token);
+  const token = useSasiToken();
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [completedChecklists, setCompletedChecklists] = useState<CompletedChecklistEntry[]>([]);
@@ -261,7 +262,7 @@ function HistoryPage() {
   const fetchHistory = useCallback(async () => {
     if (!token) { setAuthError(true); setLoading(false); return; }
     try {
-      const res = await fetch(`/api/history${authQuery}`);
+      const res = await fetch("/api/history", { headers: sasiAuthHeaders(token) });
       if (!res.ok) { setAuthError(true); setLoading(false); return; }
       const data = await res.json();
       setHistory(data.history);
@@ -276,7 +277,7 @@ function HistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, authQuery, selectedChecklistId]);
+  }, [token, selectedChecklistId]);
 
   useEffect(() => {
     fetchHistory();
@@ -288,9 +289,9 @@ function HistoryPage() {
     const fetchChecklistItems = async () => {
       setFetchingItems(true);
       try {
-        const query = `${authQuery}&checklist_id=${encodeURIComponent(selectedChecklistId)}`;
+        const query = `?checklist_id=${encodeURIComponent(selectedChecklistId)}`;
         console.log("Enviando request de checklist detalhado para /api/history", query);
-        const res = await fetch(`/api/history${query}`);
+        const res = await fetch(`/api/history${query}`, { headers: sasiAuthHeaders(token) });
         console.log("Response status from /api/history:", res.status);
         if (!res.ok) {
           console.error("Resposta não OK da rota /api/history", await res.text());
@@ -309,7 +310,7 @@ function HistoryPage() {
     };
 
     fetchChecklistItems();
-  }, [selectedChecklistId, token, authQuery]);
+  }, [selectedChecklistId, token]);
 
   const handleExport = () => {
     console.log("Botão clicado");
@@ -397,7 +398,7 @@ function HistoryPage() {
           background: "#181C27", border: "1px solid #2A1A1A",
           borderRadius: 12, padding: "40px 48px", textAlign: "center", maxWidth: 400
         }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
+          <Lock size={36} color="#F87171" style={{ marginBottom: 16 }} />
           <h2 style={{ color: "#F87171", fontSize: 20, fontWeight: 600 }}>Acesso negado</h2>
           <p style={{ color: "#7A82A0", fontSize: 14 }}>Token inválido ou não informado.</p>
         </div>
@@ -411,10 +412,10 @@ function HistoryPage() {
         <div className="history-header-inner">
           <div className="history-header-left">
             <Link
-              href={`/${authQuery}`}
+              href="/"
               className="history-back-link"
             >
-              ← Checklist
+              <ArrowLeft size={14} /> Checklist
             </Link>
           </div>
           <div className="history-header-main">
@@ -460,7 +461,9 @@ function HistoryPage() {
                 borderRadius: 8,
                 color: "#E8EAF0",
                 padding: "10px 14px",
-                minWidth: 280,
+                flex: "1 1 280px",
+                minWidth: 0,
+                maxWidth: "100%",
               }}
             >
               {completedChecklists.map((entry) => (
@@ -474,8 +477,9 @@ function HistoryPage() {
               className="history-export-button"
               disabled={!selectedChecklistId || selectedChecklistItems.length === 0 || fetchingItems || exporting}
               onClick={handleExport}
+              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
             >
-              {exporting ? "Exportando..." : "Exportar XLSX do Checklist"}
+              <Download size={14} className={exporting ? "spin-icon" : undefined} /> {exporting ? "Exportando..." : "Exportar XLSX do Checklist"}
             </button>
           </div>
         </div>
@@ -521,7 +525,7 @@ function HistoryPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <span className="search-icon">🔍</span>
+            <Search size={14} className="search-icon" />
           </div>
 
           {groups.length === 0 ? (
@@ -542,16 +546,18 @@ function HistoryPage() {
                   <button
                     type="button"
                     className="history-toolbar-button"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
                     onClick={() => setOpenGroups(new Set(groups.map((group) => group.activityId)))}
                   >
-                    Expandir tudo
+                    <ChevronDown size={12} /> Expandir tudo
                   </button>
                   <button
                     type="button"
                     className="history-toolbar-button"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
                     onClick={() => setOpenGroups(new Set())}
                   >
-                    Recolher tudo
+                    <ChevronUp size={12} /> Recolher tudo
                   </button>
                 </div>
               </div>
@@ -586,7 +592,7 @@ function HistoryPage() {
                             {formatDate(group.lastAt)}
                           </span>
                         </span>
-                        <span className="history-group-caret" data-open={isOpen}>▼</span>
+                        <span className="history-group-caret" data-open={isOpen}><ChevronDown size={14} /></span>
                       </button>
 
                       {isOpen && (
@@ -609,7 +615,7 @@ function HistoryPage() {
                                       background: `${info.color}1F`,
                                     }}
                                   >
-                                    <span aria-hidden="true">{info.icon}</span>
+                                    <info.icon size={12} aria-hidden="true" />
                                     {info.label}
                                   </span>
                                   <span className="history-event-time">{formatDate(entry.created_at)}</span>
@@ -653,7 +659,7 @@ function HistoryPage() {
         </section>
       </main>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } } .spin-icon { animation: spin 0.8s linear infinite; }`}</style>
     </div>
   );
 }
