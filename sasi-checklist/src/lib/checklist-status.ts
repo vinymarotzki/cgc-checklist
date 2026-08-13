@@ -62,6 +62,22 @@ export function getStatusColor(status: string): string {
   return map[status] ?? "#7A82A0";
 }
 
+/**
+ * Pílula de status usada nas telas de histórico.
+ *
+ * Usa o preenchimento sólido de getStatusStyle porque a versão só-contorno
+ * deixava CONCLUIDO (#11734b) praticamente ilegível sobre o fundo escuro.
+ * SEM_STATUS ganha um cinza neutro em vez de cair no fallback vermelho de
+ * getStatusStyle, que faria "Sem Status" parecer "Não Iniciado".
+ */
+export function getStatusPillStyle(status: string | null | undefined) {
+  if (!status || status === "SEM_STATUS") {
+    return { background: "#1E2333", color: "#7A82A0", border: "1px solid #2A3045" };
+  }
+  const style = getStatusStyle(status);
+  return { background: style.bg, color: style.text, border: `1px solid ${style.border}` };
+}
+
 /** Cor estável derivada do nome do agrupamento (categoria, grupo, etc.). */
 export function getCategoryColor(category: string): string {
   const colors = [

@@ -290,80 +290,194 @@ select option {
   font-weight: 700;
 }
 
-/* Dropdown único que agrupa todo o histórico (alterações, edições,
-   exclusões e comentários) — mantém a tela curta e só carrega visualmente
-   a lista quando o usuário abre. */
-.history-collapse {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  margin-bottom: 24px;
-  overflow: hidden;
-}
-
-.history-collapse-trigger {
-  width: 100%;
+/* Histórico agrupado por atividade: cada atividade vira um dropdown cujo
+   título é o nome da atividade, e tudo que aconteceu com ela (mudança de
+   status, comentário criado, editado ou apagado) aparece ao abrir. */
+.history-groups-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.history-groups-summary {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.history-toolbar-button {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.history-toolbar-button:hover {
+  color: var(--text);
+  border-color: var(--accent-dim);
+}
+
+.history-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-group {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.history-group[data-open="true"] {
+  border-color: var(--accent-dim);
+}
+
+.history-group-trigger {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
   background: transparent;
   border: none;
-  padding: 16px 18px;
+  padding: 14px 16px;
   color: var(--text);
   font-family: inherit;
-  font-size: 15px;
-  font-weight: 600;
   text-align: left;
   cursor: pointer;
 }
 
-.history-collapse-trigger:hover {
+.history-group-trigger:hover {
   background: rgba(255, 255, 255, 0.03);
 }
 
-.history-collapse-label {
+.history-group-head {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 8px;
   min-width: 0;
 }
 
-.history-collapse-count {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 2px 10px;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 600;
+.history-group-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-.history-collapse-caret {
+.history-group-title {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.history-group-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.history-group-caret {
   color: var(--text-muted);
   font-size: 12px;
   flex-shrink: 0;
+  margin-top: 4px;
   transition: transform 0.18s ease;
 }
 
-.history-collapse-caret[data-open="true"] {
+.history-group-caret[data-open="true"] {
   transform: rotate(180deg);
 }
 
-.history-collapse-body {
+.history-events {
+  list-style: none;
+  margin: 0;
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   border-top: 1px solid var(--border);
-  padding: 16px 18px 18px;
+}
+
+.history-event {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.history-event-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.history-event-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.history-event-time {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.history-event-comment {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--surface);
+  border-left: 3px solid var(--accent-dim);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.history-event-user {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.history-event-user strong {
+  color: var(--text);
+  font-weight: 600;
 }
 
 @media (max-width: 640px) {
-  .history-collapse-trigger {
-    padding: 14px;
-    font-size: 14px;
+  .history-group-trigger {
+    padding: 12px 14px;
   }
 
-  .history-collapse-body {
-    padding: 14px;
+  .history-events {
+    padding: 12px;
+  }
+
+  .history-event-head {
+    gap: 6px;
   }
 }
 
@@ -437,8 +551,10 @@ select option {
 }
 
 .history-category-badge {
-  font-size: 10px;
-  color: var(--muted);
+  /* --muted (#4A5270) sobre o fundo escuro fica quase ilegível; --text-muted
+     mantém o tom secundário com contraste suficiente. */
+  font-size: 11px;
+  color: var(--text-muted);
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -462,10 +578,11 @@ select option {
 }
 
 .history-status-pill {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 20px;
+  white-space: nowrap;
 }
 
 .history-observation-badge {

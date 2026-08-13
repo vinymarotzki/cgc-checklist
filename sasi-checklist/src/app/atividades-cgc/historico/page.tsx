@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { STATUS_LABELS, getStatusColor } from "@/lib/checklist-status";
+import { STATUS_LABELS, getStatusColor, getStatusPillStyle } from "@/lib/checklist-status";
 
 interface CgcHistoryEntry {
   id: string;
@@ -32,14 +32,80 @@ interface User {
 
 /** Mesmos prefixos usados pelo histórico do checklist. */
 const OBSERVATION_EVENTS = [
-  { prefix: "Observação adicionada:", label: "Comentário criado", color: "#60A5FA" },
-  { prefix: "Observação editada:", label: "Comentário editado", color: "#F59E0B" },
-  { prefix: "Observação apagada:", label: "Comentário apagado", color: "#F87171" },
+  { prefix: "Observação adicionada:", label: "Comentário criado", color: "#60A5FA", icon: "💬" },
+  { prefix: "Observação editada:", label: "Comentário editado", color: "#F59E0B", icon: "✏️" },
+  { prefix: "Observação apagada:", label: "Comentário apagado", color: "#F87171", icon: "🗑️" },
 ];
 
 function getObservationEvent(observation: string | null) {
   if (!observation) return null;
   return OBSERVATION_EVENTS.find((event) => observation.startsWith(event.prefix)) || null;
+}
+
+/** Rótulo, cor e texto de um evento do histórico, seja status ou comentário. */
+function describeEntry(entry: CgcHistoryEntry) {
+  const event = getObservationEvent(entry.observation);
+  const text = event
+    ? entry.observation?.slice(event.prefix.length).trim() || null
+    : entry.observation;
+  const statusChanged = !event && entry.old_status !== entry.new_status;
+
+  if (event) {
+    return { label: event.label, color: event.color, icon: event.icon, text, statusChanged };
+  }
+  return {
+    label: statusChanged ? "Status alterado" : "Registro",
+    color: getStatusColor(entry.new_status || "SEM_STATUS"),
+    icon: statusChanged ? "🔄" : "📝",
+    text,
+    statusChanged,
+  };
+}
+
+interface CgcActivityGroup {
+  messageId: string;
+  title: string;
+  groupName: string;
+  priority: string | null;
+  deadline: string | null;
+  entries: CgcHistoryEntry[];
+  lastAt: string;
+  currentStatus: string | null;
+}
+
+/**
+ * Agrupa o histórico por atividade (mensagem do SASI) para que cada dropdown
+ * seja uma atividade. listHistory devolve created_at DESC, então a primeira
+ * entrada de cada grupo já é a mais recente — e é dela que saem prioridade e
+ * prazo, que ficam denormalizados em cgc_history e podem mudar entre eventos.
+ */
+function groupByActivity(entries: CgcHistoryEntry[]): CgcActivityGroup[] {
+  const groups = new Map<string, CgcActivityGroup>();
+
+  entries.forEach((entry) => {
+    const existing = groups.get(entry.message_id);
+    if (existing) {
+      existing.entries.push(entry);
+      return;
+    }
+    groups.set(entry.message_id, {
+      messageId: entry.message_id,
+      title: entry.description || `Atividade ${entry.message_id}`,
+      groupName: entry.group_name || "—",
+      priority: entry.priority,
+      deadline: entry.deadline,
+      entries: [entry],
+      lastAt: entry.created_at,
+      currentStatus: null,
+    });
+  });
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    currentStatus:
+      group.entries.find((entry) => entry.new_status && entry.new_status !== "SEM_STATUS")
+        ?.new_status ?? null,
+  }));
 }
 
 function formatDate(iso: string) {
@@ -65,9 +131,9 @@ function CgcHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  // Todo o histórico (status alterado, comentários criados/editados/apagados)
-  // fica dentro de um único dropdown, fechado por padrão.
-  const [changesOpen, setChangesOpen] = useState(false);
+  // Cada atividade é um dropdown fechado por padrão; abrir revela tudo que
+  // aconteceu com ela (status alterado, comentário criado/editado/apagado).
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
 
   const query = useMemo(
     () => (token ? `?sasi-token=${encodeURIComponent(token)}` : ""),
@@ -106,6 +172,39 @@ function CgcHistoryPage() {
     fetchHistory();
   }, [fetchHistory]);
 
+  const term = searchTerm.trim().toLowerCase();
+  const filtered = useMemo(
+    () =>
+      term
+        ? history.filter((entry) =>
+            [entry.description, entry.group_name, entry.user_name, entry.observation]
+              .some((value) => value?.toLowerCase().includes(term))
+          )
+        : history,
+    [history, term]
+  );
+
+  const activityGroups = useMemo(() => groupByActivity(filtered), [filtered]);
+
+  // Durante uma busca não faz sentido obrigar o usuário a abrir grupo por grupo
+  // para ver o que casou com o termo.
+  useEffect(() => {
+    if (!term) return;
+    setOpenGroups(new Set(activityGroups.map((group) => group.messageId)));
+  }, [term, activityGroups]);
+
+  const toggleGroup = (messageId: string) => {
+    setOpenGroups((previous) => {
+      const next = new Set(previous);
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+      return next;
+    });
+  };
+
   if (loading) {
     return (
       <div style={{ background: "#0F1117", minHeight: "100vh", display: "grid", placeItems: "center", color: "#7A82A0" }}>
@@ -125,14 +224,6 @@ function CgcHistoryPage() {
       </div>
     );
   }
-
-  const term = searchTerm.trim().toLowerCase();
-  const filtered = term
-    ? history.filter((entry) =>
-        [entry.description, entry.group_name, entry.user_name, entry.observation]
-          .some((value) => value?.toLowerCase().includes(term))
-      )
-    : history;
 
   const totalConcluded = groups.reduce((sum, group) => sum + group.concluded, 0);
 
@@ -191,127 +282,155 @@ function CgcHistoryPage() {
           )}
         </section>
 
-        <section className="history-collapse">
-          <button
-            type="button"
-            className="history-collapse-trigger"
-            aria-expanded={changesOpen}
-            aria-controls="cgc-history-changes-panel"
-            onClick={() => setChangesOpen((open) => !open)}
-          >
-            <span className="history-collapse-label">
-              <span>Alterações, edições, exclusões e comentários</span>
-              <span className="history-collapse-count">{history.length}</span>
-            </span>
-            <span className="history-collapse-caret" data-open={changesOpen}>▼</span>
-          </button>
+        <section className="history-completions-section">
+          <div className="history-section-header">
+            <h2 style={{ color: "#E8EAF0", fontSize: 16, margin: 0 }}>Alterações por atividade</h2>
+          </div>
 
-          {changesOpen && (
-            <div className="history-collapse-body" id="cgc-history-changes-panel">
-              <div className="history-search">
-                <input
-                  className="history-search-input"
-                  type="text"
-                  placeholder="Buscar no histórico..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <span className="search-icon">🔍</span>
+          <div className="history-search">
+            <input
+              className="history-search-input"
+              type="text"
+              placeholder="Buscar por atividade, grupo, usuário ou comentário..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <span className="search-icon">🔍</span>
+          </div>
+
+          {activityGroups.length === 0 ? (
+            <div className="history-empty-state">
+              <p>
+                {history.length === 0
+                  ? "Nenhuma alteração registrada ainda."
+                  : "Nenhum resultado encontrado."}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="history-groups-toolbar">
+                <span className="history-groups-summary">
+                  {activityGroups.length === 1 ? "1 atividade" : `${activityGroups.length} atividades`}
+                  {" · "}
+                  {filtered.length === 1 ? "1 alteração" : `${filtered.length} alterações`}
+                </span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="button"
+                    className="history-toolbar-button"
+                    onClick={() => setOpenGroups(new Set(activityGroups.map((group) => group.messageId)))}
+                  >
+                    Expandir tudo
+                  </button>
+                  <button
+                    type="button"
+                    className="history-toolbar-button"
+                    onClick={() => setOpenGroups(new Set())}
+                  >
+                    Recolher tudo
+                  </button>
+                </div>
               </div>
 
-              {filtered.length === 0 ? (
-          <div className="history-empty-state">
-            <p>
-              {history.length === 0
-                ? "Nenhuma alteração registrada ainda."
-                : "Nenhum resultado encontrado."}
-            </p>
-          </div>
-        ) : (
-          <div className="history-list">
-            {filtered.map((entry) => {
-              const event = getObservationEvent(entry.observation);
-              const observationText = event
-                ? entry.observation?.slice(event.prefix.length).trim()
-                : entry.observation;
-              const statusChanged = !event && entry.old_status !== entry.new_status;
+              <div className="history-groups">
+                {activityGroups.map((group) => {
+                  const isOpen = openGroups.has(group.messageId);
+                  const panelId = `cgc-history-group-${group.messageId}`;
 
-              return (
-                <div
-                  key={entry.id}
-                  className="history-card"
-                  style={{
-                    borderLeftColor:
-                      event?.color || getStatusColor(entry.new_status || "SEM_STATUS"),
-                  }}
-                >
-                  <div className="history-card-content">
-                    <div className="history-card-main">
-                      <div className="history-category-tag">
-                        <span className="history-category-badge">{entry.group_name || "—"}</span>
-                      </div>
-
-                      <p className="history-activity">
-                        {entry.description || `Atividade ${entry.message_id}`}
-                      </p>
-
-                      {(entry.priority || entry.deadline) && (
-                        <div className="history-status-row" style={{ marginBottom: 8 }}>
-                          {entry.priority && (
-                            <span className="history-category-badge">{entry.priority}</span>
-                          )}
-                          {entry.deadline && (
-                            <span className="history-category-badge">Prazo: {entry.deadline}</span>
-                          )}
-                        </div>
-                      )}
-
-                      {statusChanged && (
-                        <div className="history-status-row">
-                          {[entry.old_status, entry.new_status].map((status, index) => (
-                            <span key={`${entry.id}-${index}`} style={{ display: "contents" }}>
-                              {index === 1 && <span style={{ color: "#4A5270", fontSize: 12 }}>→</span>}
-                              <span
-                                className="history-status-pill"
-                                style={{
-                                  border: `1px solid ${getStatusColor(status || "SEM_STATUS")}`,
-                                  color: getStatusColor(status || "SEM_STATUS"),
-                                  background: `${getStatusColor(status || "SEM_STATUS")}15`,
-                                }}
-                              >
-                                {STATUS_LABELS[status || "SEM_STATUS"] || status || "—"}
+                  return (
+                    <div key={group.messageId} className="history-group" data-open={isOpen}>
+                      <button
+                        type="button"
+                        className="history-group-trigger"
+                        aria-expanded={isOpen}
+                        aria-controls={panelId}
+                        onClick={() => toggleGroup(group.messageId)}
+                      >
+                        <span className="history-group-head">
+                          <span className="history-group-badges">
+                            <span className="history-category-badge">{group.groupName}</span>
+                            {group.priority && (
+                              <span className="history-category-badge">{group.priority}</span>
+                            )}
+                            {group.deadline && (
+                              <span className="history-category-badge">Prazo: {group.deadline}</span>
+                            )}
+                            {group.currentStatus && (
+                              <span className="history-status-pill" style={getStatusPillStyle(group.currentStatus)}>
+                                {STATUS_LABELS[group.currentStatus] || group.currentStatus}
                               </span>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {event && (
-                        <span
-                          className="history-observation-badge"
-                          style={{ borderColor: event.color, color: event.color, background: `${event.color}20` }}
-                        >
-                          {event.label}
+                            )}
+                          </span>
+                          <span className="history-group-title">{group.title}</span>
+                          <span className="history-group-meta">
+                            {group.entries.length === 1 ? "1 alteração" : `${group.entries.length} alterações`}
+                            {" · última em "}
+                            {formatDate(group.lastAt)}
+                          </span>
                         </span>
-                      )}
-                      {observationText && (
-                        <p className="history-observation" style={{ marginTop: event ? 8 : 0 }}>
-                          💬 {observationText}
-                        </p>
-                      )}
-                    </div>
+                        <span className="history-group-caret" data-open={isOpen}>▼</span>
+                      </button>
 
-                    <div className="history-card-meta">
-                      <div className="meta-name">{entry.user_name || "—"}</div>
-                      <div className="meta-date">{formatDate(entry.created_at)}</div>
+                      {isOpen && (
+                        <ul className="history-events" id={panelId}>
+                          {group.entries.map((entry) => {
+                            const info = describeEntry(entry);
+
+                            return (
+                              <li
+                                key={entry.id}
+                                className="history-event"
+                                style={{ borderLeftColor: info.color }}
+                              >
+                                <div className="history-event-head">
+                                  <span
+                                    className="history-event-kind"
+                                    style={{
+                                      borderColor: info.color,
+                                      color: info.color,
+                                      background: `${info.color}1F`,
+                                    }}
+                                  >
+                                    <span aria-hidden="true">{info.icon}</span>
+                                    {info.label}
+                                  </span>
+                                  <span className="history-event-time">{formatDate(entry.created_at)}</span>
+                                </div>
+
+                                {info.statusChanged && (
+                                  <div className="history-status-row">
+                                    <span className="history-status-pill" style={getStatusPillStyle(entry.old_status)}>
+                                      {STATUS_LABELS[entry.old_status || "SEM_STATUS"] || entry.old_status || "—"}
+                                    </span>
+                                    <span style={{ color: "#7A82A0", fontSize: 14 }}>→</span>
+                                    <span className="history-status-pill" style={getStatusPillStyle(entry.new_status)}>
+                                      {STATUS_LABELS[entry.new_status || "SEM_STATUS"] || entry.new_status || "—"}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {info.text && (
+                                  <p
+                                    className="history-event-comment"
+                                    style={{ marginTop: info.statusChanged ? 10 : 0 }}
+                                  >
+                                    {info.text}
+                                  </p>
+                                )}
+
+                                <div className="history-event-user">
+                                  por <strong>{entry.user_name || "—"}</strong>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </section>
       </main>
