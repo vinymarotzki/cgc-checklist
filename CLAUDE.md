@@ -188,6 +188,15 @@ Icons are `lucide-react` components (e.g. `<Search size={14} />`), not emoji —
 screen was migrated off emoji glyphs. Match that for new UI instead of reintroducing
 emoji.
 
+## Git workflow
+
+`main` and `develop` are the only long-lived branches. Every change — feature, fix,
+chore, anything — gets its own branch off `develop`, named `FIX/<what-it-does-in-english>`
+(kebab-case, e.g. `FIX/add-lucide-icons`, `FIX/group-totals-sync`), regardless of
+whether the change is actually a bug fix — `FIX/` is the fixed prefix for all of them.
+Work happens on that branch, then merges into `develop`. `develop` is promoted to
+`main` afterward, as its own separate step — not per-branch.
+
 ## Conventions
 
 The product is Brazilian Portuguese: UI strings, code comments and doc comments are
