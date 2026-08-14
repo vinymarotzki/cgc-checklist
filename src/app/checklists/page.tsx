@@ -6,7 +6,9 @@ import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
 import { getStatusColor } from "@/lib/checklist-status";
 import * as XLSX from "xlsx";
-import { Lock, RefreshCw, Plus, ExternalLink, Pencil, Trash2, Upload } from "lucide-react";
+import { Lock, RefreshCw, Plus, ExternalLink, Pencil, Trash2, Upload, MenuIcon, XIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface ChecklistSummary {
   id: string;
@@ -167,6 +169,8 @@ function ChecklistsPage() {
   const [parseError, setParseError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Toggle hamburger/close por card: abrir revela Editar/Excluir, fechar esconde.
+  const [openActionsId, setOpenActionsId] = useState<string | null>(null);
   const [rawRows, setRawRows] = useState<unknown[][]>([]);
   const [headerRowIndex, setHeaderRowIndex] = useState<number | null>(null);
   const [detectedColumns, setDetectedColumns] = useState<string[]>([]);
@@ -458,14 +462,89 @@ function ChecklistsPage() {
             {checklists.map((checklist) => (
               <div
                 key={checklist.id}
-                className="split-card"
                 style={{
+                  position: "relative",
                   background: "#181C27", border: "1px solid #2A3045",
                   borderLeft: `3px solid ${progressColor(checklist.progress)}`,
-                  borderRadius: 10, padding: 18
+                  borderRadius: 10, padding: 12
                 }}
               >
-                <div style={{ minWidth: 0 }}>
+                <div className="absolute top-2 right-2 flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    nativeButton={false}
+                    style={{ background: "#1E2333", borderColor: "#3B6EF5", color: "#E8EAF0" }}
+                    aria-label="Abrir checklist"
+                    title="Abrir checklist"
+                    render={<Link href={`/?checklist=${encodeURIComponent(checklist.id)}`} />}
+                  >
+                    <ExternalLink />
+                  </Button>
+                  {openActionsId === checklist.id && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        style={{ background: "#3B82F6", borderColor: "#3B6EF5", color: "#E8EAF0" }}
+                        aria-label="Editar checklist"
+                        title="Editar checklist"
+                        onClick={() => {
+                          openEditModal(checklist);
+                          setOpenActionsId(null);
+                        }}
+                      >
+                        <Pencil />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon-sm"
+                        style={{ background: "transparent", borderColor: "#3A2430", color: "#F87171" }}
+                        aria-label={deletingId === checklist.id ? "Excluindo..." : "Excluir checklist"}
+                        title={deletingId === checklist.id ? "Excluindo..." : "Excluir checklist"}
+                        disabled={deletingId === checklist.id}
+                        onClick={() => deleteChecklist(checklist.id)}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    style={{ background: "#1E2333", borderColor: "#2A3045", color: "#7A82A0" }}
+                    aria-label={openActionsId === checklist.id ? "Fechar ações" : "Abrir ações"}
+                    aria-expanded={openActionsId === checklist.id}
+                    onClick={() =>
+                      setOpenActionsId((prev) => (prev === checklist.id ? null : checklist.id))
+                    }
+                  >
+                    <span className="relative flex size-4 items-center justify-center">
+                      <MenuIcon
+                        aria-hidden="true"
+                        className={cn(
+                          "absolute size-4 transition-all duration-200",
+                          openActionsId === checklist.id
+                            ? "scale-75 rotate-90 opacity-0"
+                            : "scale-100 rotate-0 opacity-100"
+                        )}
+                      />
+                      <XIcon
+                        aria-hidden="true"
+                        className={cn(
+                          "absolute size-4 transition-all duration-200",
+                          openActionsId === checklist.id
+                            ? "scale-100 rotate-0 opacity-100"
+                            : "scale-75 -rotate-90 opacity-0"
+                        )}
+                      />
+                    </span>
+                  </Button>
+                </div>
+                <div style={{ minWidth: 0, paddingRight: 140 }}>
                   <h2 style={{ margin: "0 0 10px", fontSize: 17, fontWeight: 700 }}>{checklist.title}</h2>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#7A82A0", fontSize: 12 }}>
@@ -484,27 +563,6 @@ function ChecklistsPage() {
                     </div>
                     <span style={{ color: "#E8EAF0", fontSize: 13, fontWeight: 700 }}>{checklist.progress}%</span>
                   </div>
-                </div>
-                <div className="card-actions">
-                  <Link
-                    href={`/?checklist=${encodeURIComponent(checklist.id)}`}
-                    style={{ background: "#1E2333", border: "1px solid #3B6EF5", color: "#E8EAF0", borderRadius: 8, padding: "9px 14px", textDecoration: "none", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}
-                  >
-                    <ExternalLink size={14} /> Abrir
-                  </Link>
-                  <button
-                    onClick={() => openEditModal(checklist)}
-                    style={{ background: "#3B82F6", border: "1px solid #3B6EF5", color: "#E8EAF0", borderRadius: 8, padding: "9px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
-                  >
-                    <Pencil size={14} /> Editar
-                  </button>
-                  <button
-                    onClick={() => deleteChecklist(checklist.id)}
-                    disabled={deletingId === checklist.id}
-                    style={{ background: "transparent", border: "1px solid #3A2430", color: "#F87171", borderRadius: 8, padding: "9px 12px", cursor: deletingId === checklist.id ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
-                  >
-                    <Trash2 size={14} /> {deletingId === checklist.id ? "Excluindo..." : "Excluir"}
-                  </button>
                 </div>
               </div>
             ))}
