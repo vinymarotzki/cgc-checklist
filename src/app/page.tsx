@@ -6,7 +6,7 @@ import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
 import Link from "next/link";
 import { Suspense } from "react";
-import { History, ClipboardList, Search, MessageSquare, Pencil, X, Lock } from "lucide-react";
+import { History, ClipboardList, Search, MessageSquare, Pencil, X, Lock, Settings } from "lucide-react";
 import {
   STATUS_OPTIONS,
   getCategoryColor,
@@ -321,6 +321,17 @@ function ChecklistPage() {
             >
               <ClipboardList size={14} /> Checklists
             </Link>
+            <Link
+              href={`/admin?checklist=${encodeURIComponent(checklistId)}`}
+              style={{
+                color: "#7A82A0", fontSize: 13, textDecoration: "none",
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
+                transition: "all 0.15s"
+              }}
+            >
+              <Settings size={14} /> Editar conteúdo
+            </Link>
             <div style={{
               display: "flex", alignItems: "center", gap: 8,
               padding: "6px 12px", background: "#1E2333",
@@ -443,7 +454,23 @@ function ChecklistPage() {
             textAlign: "center", padding: "60px 24px",
             background: "#181C27", borderRadius: 12, border: "1px solid #2A3045"
           }}>
-            <p style={{ color: "#7A82A0", fontSize: 15 }}>Nenhuma atividade encontrada</p>
+            <p style={{ color: "#7A82A0", fontSize: 15, margin: "0 0 16px" }}>
+              {activities.length === 0 && !searchTerm && filter === "TODOS"
+                ? "Este checklist ainda não tem atividades. Adicione categorias e atividades para começar."
+                : "Nenhuma atividade encontrada"}
+            </p>
+            {activities.length === 0 && (
+              <Link
+                href={`/admin?checklist=${encodeURIComponent(checklistId)}`}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "#3B6EF5", color: "white", textDecoration: "none",
+                  borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 700,
+                }}
+              >
+                <Settings size={14} /> Adicionar categorias e atividades
+              </Link>
+            )}
           </div>
         ) : (
           Object.entries(groups).map(([category, items]) => {

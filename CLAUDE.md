@@ -188,6 +188,20 @@ Icons are `lucide-react` components (e.g. `<Search size={14} />`), not emoji —
 screen was migrated off emoji glyphs. Match that for new UI instead of reintroducing
 emoji.
 
+## Git workflow
+
+`main` and `develop` are the only long-lived branches. Every change — feature, fix,
+chore, anything — gets its own branch off `develop`, named `FIX/<what-it-does-in-english>`
+(kebab-case, e.g. `FIX/add-lucide-icons`, `FIX/group-totals-sync`), regardless of
+whether the change is actually a bug fix — `FIX/` is the fixed prefix for all of them.
+
+Work happens on that branch, then opens a real GitHub pull request into `develop`
+(`gh pr create`) — no direct merges. The PR body has a `## Summary` section, written
+as a tidy summary of what changed, not a raw diff dump. The PR is left for merging
+(by the user or a reviewer), not merged automatically as part of doing the work.
+`develop` is promoted to `main` afterward, as its own separate, deliberate step — not
+per-branch/per-PR.
+
 ## Conventions
 
 The product is Brazilian Portuguese: UI strings, code comments and doc comments are
