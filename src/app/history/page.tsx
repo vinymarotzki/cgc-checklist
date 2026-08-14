@@ -5,11 +5,10 @@ import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
 import Link from "next/link";
 import { Suspense } from "react";
-import * as XLSX from "xlsx";
 import { STATUS_LABELS, getStatusColor, getStatusPillStyle } from "@/lib/checklist-status";
 import {
   Lock, Search, ArrowLeft, MessageSquare, Pencil, Trash2, RefreshCw, FileText,
-  ChevronDown, ChevronUp, Download, type LucideIcon,
+  ChevronDown, ChevronUp, type LucideIcon,
 } from "lucide-react";
 
 interface HistoryEntry {
@@ -23,27 +22,6 @@ interface HistoryEntry {
   user_name: string;
   observation: string | null;
   created_at: string;
-}
-
-interface CompletedChecklistEntry {
-  id: string;
-  user_id: string;
-  user_name: string;
-  total_items: number;
-  completed_items: number;
-  created_at?: string;
-  completed_at: string;
-}
-
-interface CompletedChecklistItem {
-  id: string;
-  activity_id: string;
-  description: string;
-  category: string;
-  status: string;
-  observation: string | null;
-  responsible: string | null;
-  updated_at: string;
 }
 
 interface User {
@@ -131,126 +109,10 @@ function formatDate(iso: string) {
   });
 }
 
-function formatDateOnly(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("pt-BR", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-  });
-}
-
-function formatTimeOnly(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString("pt-BR", {
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
-}
-
-function escapeCsv(value: string | number | null | undefined) {
-  if (value === undefined || value === null) return "";
-  const text = String(value);
-  if (text.includes("\"") || text.includes(",") || text.includes("\n")) {
-    return `"${text.replace(/\"/g, '""')}"`;
-  }
-  return text;
-}
-
-function getCellWidth(value: string | number | null | undefined) {
-  const text = value === undefined || value === null ? "" : String(value);
-  return Math.min(Math.max(text.length + 2, 12), 50);
-}
-
-function exportChecklistXlsx(checklist: CompletedChecklistEntry, items: CompletedChecklistItem[]) {
-  const titleRow = [
-    "Data de Criação",
-    "Data de Finalização",
-    "Horário de Finalização",
-    "Usuário Responsável pela Finalização",
-    "Percentual Concluído",
-    "",
-    "",
-  ];
-  const metaRow = [
-    formatDateOnly(checklist.created_at || checklist.completed_at),
-    formatDateOnly(checklist.completed_at),
-    formatTimeOnly(checklist.completed_at),
-    checklist.user_name,
-    `${Math.round((checklist.completed_items / checklist.total_items) * 100)}%`,
-    "",
-    "",
-  ];
-  const headerRow = [
-    "Seção",
-    "Subcategoria",
-    "Atividade",
-    "Categoria",
-    "Status",
-    "Observação",
-    "Usuário Responsável",
-    "Data/Hora da Última Alteração",
-  ];
-
-  const rows = [titleRow, metaRow, [], headerRow];
-  items.forEach((item) => {
-    rows.push([
-      item.category,
-      "",
-      item.description,
-      item.category,
-      item.status,
-      item.observation || "",
-      item.responsible || "",
-      item.updated_at,
-    ]);
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"] = rows[0].map((_, colIndex) => ({ wch: Math.max(...rows.map((row) => getCellWidth(row[colIndex])), 12) }));
-  ws["!freeze"] = { ySplit: 4 };
-
-  const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
-  for (let R = 0; R <= range.e.r; ++R) {
-    for (let C = 0; C <= range.e.c; ++C) {
-      const address = XLSX.utils.encode_cell({ r: R, c: C });
-      const cell = ws[address];
-      if (!cell) continue;
-      cell.s = cell.s || {};
-      if (R === 0 || R === 1 || R === 3) {
-        cell.s.font = { bold: true };
-      }
-      if (C === 2 || C === 5) {
-        cell.s.alignment = { wrapText: true, vertical: "top" };
-      }
-    }
-  }
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Checklist");
-  const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.target = "_blank";
-  a.setAttribute("download", `checklist-completo-${checklist.completed_at.slice(0, 10)}.xlsx`);
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 1000);
-}
-
 function HistoryPage() {
   const token = useSasiToken();
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [completedChecklists, setCompletedChecklists] = useState<CompletedChecklistEntry[]>([]);
-  const [selectedChecklistId, setSelectedChecklistId] = useState<string | null>(null);
-  const [selectedChecklistItems, setSelectedChecklistItems] = useState<CompletedChecklistItem[]>([]);
-  const [fetchingItems, setFetchingItems] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
@@ -266,82 +128,18 @@ function HistoryPage() {
       if (!res.ok) { setAuthError(true); setLoading(false); return; }
       const data = await res.json();
       setHistory(data.history);
-      setCompletedChecklists(data.completed || []);
       setUser(data.user);
-      if (!selectedChecklistId && data.completed && data.completed.length > 0) {
-        setSelectedChecklistId(data.completed[0].id);
-      }
     } catch (error) {
       console.error("Erro no fetchHistory:", error);
       setAuthError(true);
     } finally {
       setLoading(false);
     }
-  }, [token, selectedChecklistId]);
+  }, [token]);
 
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
-
-  useEffect(() => {
-    if (!selectedChecklistId || !token) return;
-
-    const fetchChecklistItems = async () => {
-      setFetchingItems(true);
-      try {
-        const query = `?checklist_id=${encodeURIComponent(selectedChecklistId)}`;
-        console.log("Enviando request de checklist detalhado para /api/history", query);
-        const res = await fetch(`/api/history${query}`, { headers: sasiAuthHeaders(token) });
-        console.log("Response status from /api/history:", res.status);
-        if (!res.ok) {
-          console.error("Resposta não OK da rota /api/history", await res.text());
-          setSelectedChecklistItems([]);
-          return;
-        }
-        const data = await res.json();
-        console.log("Dados retornados de selectedChecklistItems:", data.selectedChecklistItems);
-        setSelectedChecklistItems(data.selectedChecklistItems || []);
-      } catch (error) {
-        console.error("Erro ao buscar itens do checklist selecionado:", error);
-        setSelectedChecklistItems([]);
-      } finally {
-        setFetchingItems(false);
-      }
-    };
-
-    fetchChecklistItems();
-  }, [selectedChecklistId, token]);
-
-  const handleExport = () => {
-    console.log("Botão clicado");
-    console.log("Checklist selecionado:", selectedChecklistId);
-    setExportError(null);
-    if (!selectedChecklistId) {
-      setExportError("Selecione um checklist antes de exportar.");
-      return;
-    }
-    const checklist = completedChecklists.find((entry) => entry.id === selectedChecklistId);
-    if (!checklist) {
-      setExportError("Checklist selecionado não encontrado.");
-      return;
-    }
-    if (selectedChecklistItems.length === 0) {
-      setExportError("Nenhum item encontrado para o checklist selecionado.");
-      return;
-    }
-
-    setExporting(true);
-    try {
-      console.log("Gerando XLSX...");
-      exportChecklistXlsx(checklist, selectedChecklistItems);
-      console.log("Download iniciado");
-    } catch (error) {
-      console.error("Erro ao exportar XLSX:", error);
-      setExportError("Erro ao exportar XLSX. Veja o console para mais detalhes.");
-    } finally {
-      setExporting(false);
-    }
-  };
 
   const filtered = history.filter((h) => {
     if (!searchTerm) return true;
@@ -440,77 +238,7 @@ function HistoryPage() {
             </div>
             <div className="history-stat-label">Marcadas concluídas</div>
           </div>
-          <div className="history-stat-card">
-            <div className="history-stat-value">{completedChecklists.length}</div>
-            <div className="history-stat-label">Finalizações de checklist</div>
-          </div>
-          <div className="history-stat-card">
-            <div className="history-stat-value">{new Set(completedChecklists.map((c) => c.user_id)).size}</div>
-            <div className="history-stat-label">Finalizadores únicos</div>
-          </div>
         </div>
-
-        <div className="history-actions-row">
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-            <select
-              value={selectedChecklistId ?? ""}
-              onChange={(e) => setSelectedChecklistId(e.target.value)}
-              style={{
-                background: "#181C27",
-                border: "1px solid #2A3045",
-                borderRadius: 8,
-                color: "#E8EAF0",
-                padding: "10px 14px",
-                flex: "1 1 280px",
-                minWidth: 0,
-                maxWidth: "100%",
-              }}
-            >
-              {completedChecklists.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {formatDate(entry.completed_at)} — {entry.user_name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className="history-export-button"
-              disabled={!selectedChecklistId || selectedChecklistItems.length === 0 || fetchingItems || exporting}
-              onClick={handleExport}
-              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-            >
-              <Download size={14} className={exporting ? "spin-icon" : undefined} /> {exporting ? "Exportando..." : "Exportar XLSX do Checklist"}
-            </button>
-          </div>
-        </div>
-        {exportError && (
-          <div style={{ marginTop: 12, color: "#F87171", fontSize: 14 }}>
-            {exportError}
-          </div>
-        )}
-
-        <section className="history-completions-section">
-          <div className="history-section-header">
-            <h2 style={{ color: "#E8EAF0", fontSize: 16, margin: 0 }}>Finalizações de checklist</h2>
-          </div>
-          {completedChecklists.length === 0 ? (
-            <div className="history-empty-state">
-              <p>Nenhuma finalização de checklist registrada ainda.</p>
-            </div>
-          ) : (
-            <div className="history-completions-list">
-              {completedChecklists.map((entry) => (
-                <div key={entry.id} className="history-completion-card">
-                  <div>
-                    <div className="history-completion-user">{entry.user_name}</div>
-                    <div className="history-completion-meta">{entry.total_items} itens concluídos em {formatDate(entry.completed_at)}</div>
-                  </div>
-                  <div className="history-completion-count">{entry.completed_items}/{entry.total_items}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
 
         <section className="history-completions-section">
           <div className="history-section-header">

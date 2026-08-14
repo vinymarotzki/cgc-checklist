@@ -20,7 +20,7 @@ export function getDb() {
   return client;
 }
 
-export async function initDb() {
+async function runMigrations() {
   const db = getDb();
 
   await db.execute(`
@@ -239,4 +239,53 @@ export async function initDb() {
       updated_at TEXT NOT NULL
     )
   `);
+
+  // Cache local das atividades do CGC já mapeadas (ver message-cache.ts).
+  // Mesma ideia de cgc_group_totals: sincroniza incrementalmente a partir do
+  // last_message_id, mas guarda a atividade inteira (não só a contagem), pra
+  // busca/filtro/paginação da listagem lerem daqui em vez de escanear a API
+  // SASI a cada request.
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS cgc_message_cache (
+      message_id TEXT PRIMARY KEY,
+      group_id TEXT NOT NULL,
+      data_json TEXT NOT NULL,
+      cached_at TEXT NOT NULL
+    )
+  `);
+
+  await db.execute(
+    `CREATE INDEX IF NOT EXISTS idx_cgc_message_cache_group ON cgc_message_cache (group_id)`
+  );
+
+  // Marca d'água + TTL da sincronização do cache acima. Tabela própria (em vez
+  // de reusar cgc_group_totals) porque a contagem "solicitada" da tela de
+  // seleção e o cache de atividades têm cadências diferentes — uma escreveria
+  // por cima do watermark da outra se dividissem a mesma linha.
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS cgc_message_cache_sync (
+      group_id TEXT PRIMARY KEY,
+      last_message_id INTEGER,
+      synced_at TEXT NOT NULL
+    )
+  `);
+}
+
+/**
+ * `initDb` é chamada no topo de toda rota e de toda função de lib que toca o
+ * banco — sem memoização isso reexecutava a migração inteira (~20 statements
+ * contra o Turso remoto) várias vezes por request. Memoizado no processo:
+ * a migração roda uma vez só; falha limpa o cache pra poder tentar de novo na
+ * próxima chamada em vez de deixar o processo permanentemente quebrado.
+ */
+let dbReadyPromise: Promise<void> | null = null;
+
+export function initDb(): Promise<void> {
+  if (!dbReadyPromise) {
+    dbReadyPromise = runMigrations().catch((error) => {
+      dbReadyPromise = null;
+      throw error;
+    });
+  }
+  return dbReadyPromise;
 }

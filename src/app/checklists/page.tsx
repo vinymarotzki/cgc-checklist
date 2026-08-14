@@ -421,7 +421,7 @@ function ChecklistsPage() {
               onClick={openCreateModal}
               style={{ background: "#3B6EF5", color: "white", border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
             >
-              <Plus size={16} /> Novo Checklist
+              <Plus size={16} /> <span className="btn-label-desktop">Checklist</span>
             </button>
             <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>{user.name}</span>
           </div>
@@ -432,8 +432,8 @@ function ChecklistsPage() {
         {checklists.length > 0 && (
           <div style={{
             background: "#181C27", border: "1px solid #2A3045", borderLeft: "4px solid #3B6EF5",
-            borderRadius: 12, padding: 24, marginBottom: 20,
-            display: "flex", gap: 10, flexWrap: "wrap"
+            borderRadius: 12, padding: 16, marginBottom: 16,
+            display: "flex", gap: 8, flexWrap: "wrap"
           }}>
             {[
               { label: "Checklists", value: checklists.length, color: "#60A5FA" },
@@ -443,10 +443,10 @@ function ChecklistsPage() {
             ].map((stat) => (
               <div key={stat.label} style={{
                 flex: "1 1 140px", background: "#1E2333", border: "1px solid #2A3045",
-                borderRadius: 10, padding: "12px 16px"
+                borderRadius: 10, padding: "10px 14px"
               }}>
-                <div style={{ color: stat.color, fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{stat.value}</div>
-                <div style={{ color: "#7A82A0", fontSize: 12, marginTop: 4 }}>{stat.label}</div>
+                <div style={{ color: stat.color, fontSize: 18, fontWeight: 700, lineHeight: 1 }}>{stat.value}</div>
+                <div style={{ color: "#7A82A0", fontSize: 11, marginTop: 4 }}>{stat.label}</div>
               </div>
             ))}
           </div>
