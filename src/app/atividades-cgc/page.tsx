@@ -571,36 +571,36 @@ function AtividadesCgcPage() {
                     className="split-card"
                     style={{
                       background: "#181C27", border: "1px solid #2A3045", borderRadius: 10,
-                      padding: 18, borderLeft: `4px solid ${color}`
+                      padding: 12, borderLeft: `4px solid ${color}`
                     }}
                   >
                     <div style={{ minWidth: 0 }}>
-                      <h2 style={{ margin: 0, fontSize: 16, color: "#E8EAF0" }}>{item.name}</h2>
+                      <h2 style={{ margin: 0, fontSize: 14, color: "#E8EAF0" }}>{item.name}</h2>
                       {!configured ? (
-                        <p style={{ margin: "6px 0 0", color: "#F59E0B", fontSize: 13 }}>
+                        <p style={{ margin: "6px 0 0", color: "#F59E0B", fontSize: 12 }}>
                           Grupo ainda não configurado
                         </p>
                       ) : (
-                        <div style={{ marginTop: 12 }}>
-                          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+                        <div style={{ marginTop: 8 }}>
+                          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                             <div>
-                              <div style={{ color: "#E8EAF0", fontSize: 26, fontWeight: 800, lineHeight: 1 }}>{total}</div>
-                              <div style={{ color: "#7A82A0", fontSize: 11, marginTop: 4 }}>
+                              <div style={{ color: "#E8EAF0", fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{total}</div>
+                              <div style={{ color: "#7A82A0", fontSize: 10, marginTop: 3 }}>
                                 {total === 1 ? "atividade solicitada" : "atividades solicitadas"}
                               </div>
                             </div>
                             <div>
-                              <div style={{ color: "#34D399", fontSize: 26, fontWeight: 800, lineHeight: 1 }}>{concluded}</div>
-                              <div style={{ color: "#7A82A0", fontSize: 11, marginTop: 4 }}>
+                              <div style={{ color: "#34D399", fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{concluded}</div>
+                              <div style={{ color: "#7A82A0", fontSize: 10, marginTop: 3 }}>
                                 {concluded === 1 ? "atividade concluída" : "atividades concluídas"}
                               </div>
                             </div>
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
-                            <div style={{ height: 8, background: "#1E2333", borderRadius: 999, overflow: "hidden", width: 220, maxWidth: "100%" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                            <div style={{ height: 6, background: "#1E2333", borderRadius: 999, overflow: "hidden", width: 180, maxWidth: "100%" }}>
                               <div style={{ width: `${pct}%`, height: "100%", background: "#34D399", borderRadius: 999, transition: "width 0.4s ease" }} />
                             </div>
-                            <span style={{ color: "#E8EAF0", fontSize: 12, fontWeight: 700 }}>{pct}%</span>
+                            <span style={{ color: "#E8EAF0", fontSize: 11, fontWeight: 700 }}>{pct}%</span>
                           </div>
                         </div>
                       )}
@@ -608,9 +608,9 @@ function AtividadesCgcPage() {
                     <div className="card-actions">
                       <Link
                         href={hrefWithParams("/atividades-cgc", { grupo: item.id })}
-                        style={{ background: "#1E2333", border: "1px solid #3B6EF5", color: "#E8EAF0", borderRadius: 8, padding: "9px 14px", textDecoration: "none", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}
+                        style={{ background: "#1E2333", border: "1px solid #3B6EF5", color: "#E8EAF0", borderRadius: 8, padding: "7px 12px", textDecoration: "none", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 5 }}
                       >
-                        <ExternalLink size={14} /> Abrir
+                        <ExternalLink size={13} /> <span className="btn-label-desktop">Abrir</span>
                       </Link>
                     </div>
                   </div>
@@ -651,7 +651,7 @@ function AtividadesCgcPage() {
         {/* Visão geral */}
         <div style={{
           background: "#181C27", border: "1px solid #2A3045", borderLeft: `4px solid ${getCgcGroupColor(group?.name)}`,
-          borderRadius: 12, padding: 24, marginBottom: 24
+          borderRadius: 12, padding: 16, marginBottom: 18
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
@@ -694,10 +694,10 @@ function AtividadesCgcPage() {
             ].map((stat) => (
               <div key={stat.label} style={{
                 flex: "1 1 120px", background: "#1E2333", border: "1px solid #2A3045",
-                borderRadius: 10, padding: "12px 16px"
+                borderRadius: 10, padding: "10px 14px"
               }}>
-                <div style={{ color: stat.color, fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{stat.value}</div>
-                <div style={{ color: "#7A82A0", fontSize: 12, marginTop: 4 }}>{stat.label}</div>
+                <div style={{ color: stat.color, fontSize: 18, fontWeight: 700, lineHeight: 1 }}>{stat.value}</div>
+                <div style={{ color: "#7A82A0", fontSize: 11, marginTop: 4 }}>{stat.label}</div>
               </div>
             ))}
           </div>
@@ -846,7 +846,7 @@ function AtividadesCgcPage() {
                         key={activity.id}
                         style={{
                           background: "#181C27", border: "1px solid #2A3045",
-                          borderRadius: 8, padding: "12px 16px",
+                          borderRadius: 8, padding: "9px 14px",
                           borderLeft: `3px solid ${st.border}`
                         }}
                       >
