@@ -8,7 +8,7 @@ import { useSasiToken } from "@/hooks/useSasiToken";
 import { getCgcGroupColor } from "@/lib/cgc/colors";
 import {
   ArrowLeft, ChevronUp, ChevronDown, Pencil, X, MessageSquare,
-  History, Search, Lock, RefreshCw, ListFilter, ExternalLink,
+  History, Search, Lock, RefreshCw, ExternalLink,
 } from "lucide-react";
 import {
   STATUS_OPTIONS,
@@ -496,16 +496,6 @@ function AtividadesCgcPage() {
             }}
           >
             <History size={14} /> Histórico
-          </Link>
-          <Link
-            href="/checklists"
-            style={{
-              color: "#7A82A0", fontSize: 13, textDecoration: "none",
-              padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
-              display: "flex", alignItems: "center", gap: 6
-            }}
-          >
-            <ListFilter size={14} /> Checklists
           </Link>
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
