@@ -15,8 +15,9 @@ import {
   groupToFieldRule,
   groupToMessagesQuery,
 } from "@/lib/cgc/groups";
-import { mapMessagesToActivities, messageMatchesFieldRule } from "@/lib/cgc/mapper";
+import { mapMessagesToActivities } from "@/lib/cgc/mapper";
 import { readSnapshot, recordHistory } from "@/lib/cgc/history";
+import { listGroupActivities, syncGroupMessages } from "@/lib/cgc/message-cache";
 import {
   backfillGroup,
   getStatus,
@@ -31,18 +32,9 @@ import {
   fetchProviderMessages,
   fetchProviderMessagesCount,
 } from "@/lib/sasi-api/messages";
-import type { SasiMessagesQuery, SasiProviderMessage } from "@/lib/sasi-api/types";
+import type { SasiMessagesQuery } from "@/lib/sasi-api/types";
 
 const DEFAULT_LIMIT = 50;
-
-/**
- * Teto de mensagens lidas da API quando o grupo roteia por campo. A API não
- * filtra por conteúdo de formulário, então é preciso varrer e filtrar aqui —
- * o teto evita uma varredura sem fim em canais muito grandes.
- */
-const SCAN_CAP = Number(process.env.SASI_CGC_SCAN_CAP) > 0
-  ? Number(process.env.SASI_CGC_SCAN_CAP)
-  : 500;
 
 /** HTTP de saída para cada tipo de falha da API SASI. */
 function statusForError(error: SasiApiError): number {
@@ -178,48 +170,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(body);
     }
 
-    // Com roteamento por campo: varre páginas da API até o teto, filtra e
-    // pagina localmente — só assim a contagem e as páginas ficam corretas.
-    const matched: SasiProviderMessage[] = [];
-    let scanned = 0;
-    let truncated = false;
-    let apiPage = 1;
-
-    while (scanned < SCAN_CAP) {
-      const batch = await fetchProviderMessages(
-        { ...baseQuery, page: apiPage, limit: SASI_MESSAGES_MAX_LIMIT },
-        { token: sasiToken }
-      );
-
-      scanned += batch.length;
-      for (const message of batch) {
-        if (messageMatchesFieldRule(message, fieldRule)) matched.push(message);
-      }
-
-      if (batch.length < SASI_MESSAGES_MAX_LIMIT) break;
-      if (scanned >= SCAN_CAP) {
-        truncated = true;
-        break;
-      }
-      apiPage += 1;
-    }
-
-    const start = (page - 1) * limit;
-    const slice = matched.slice(start, start + limit);
-    const mapped = mapMessagesToActivities(slice, { groupName: group.name });
-    const { skipped } = mapped;
-    const activities = await applyLocalStatuses(mapped.activities, group.id);
+    // Roteado por campo: lê do cache local, sincronizado incrementalmente —
+    // não varre a API a cada request. Ver message-cache.ts.
+    await syncGroupMessages(group, sasiToken);
+    const { activities, total } = await listGroupActivities(group.id, {
+      page,
+      limit,
+      search: baseQuery.search,
+    });
 
     const body: CgcActivitiesResponse = {
       activities,
       group,
       page,
       limit,
-      total: truncated ? null : matched.length,
-      hasMore: start + limit < matched.length,
-      skipped,
-      scanned,
-      truncated,
+      total,
+      hasMore: page * limit < total,
+      skipped: 0,
+      scanned: total,
+      truncated: false,
       unconfigured: false,
       user,
     };
