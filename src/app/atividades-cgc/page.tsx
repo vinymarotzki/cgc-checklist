@@ -551,10 +551,6 @@ function AtividadesCgcPage() {
                   item.team_name || item.app_ids
                 );
 
-                const total = item.total ?? 0;
-                const concluded = item.concluded ?? 0;
-                const pct = total > 0 ? Math.round((concluded / total) * 100) : 0;
-
                 return (
                   <div
                     key={item.id}
@@ -566,33 +562,10 @@ function AtividadesCgcPage() {
                   >
                     <div style={{ minWidth: 0 }}>
                       <h2 style={{ margin: 0, fontSize: 14, color: "#E8EAF0" }}>{item.name}</h2>
-                      {!configured ? (
+                      {!configured && (
                         <p style={{ margin: "6px 0 0", color: "#F59E0B", fontSize: 12 }}>
                           Grupo ainda não configurado
                         </p>
-                      ) : (
-                        <div style={{ marginTop: 8 }}>
-                          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                            <div>
-                              <div style={{ color: "#E8EAF0", fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{total}</div>
-                              <div style={{ color: "#7A82A0", fontSize: 10, marginTop: 3 }}>
-                                {total === 1 ? "atividade solicitada" : "atividades solicitadas"}
-                              </div>
-                            </div>
-                            <div>
-                              <div style={{ color: "#34D399", fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{concluded}</div>
-                              <div style={{ color: "#7A82A0", fontSize: 10, marginTop: 3 }}>
-                                {concluded === 1 ? "atividade concluída" : "atividades concluídas"}
-                              </div>
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                            <div style={{ height: 6, background: "#1E2333", borderRadius: 999, overflow: "hidden", width: 180, maxWidth: "100%" }}>
-                              <div style={{ width: `${pct}%`, height: "100%", background: "#34D399", borderRadius: 999, transition: "width 0.4s ease" }} />
-                            </div>
-                            <span style={{ color: "#E8EAF0", fontSize: 11, fontWeight: 700 }}>{pct}%</span>
-                          </div>
-                        </div>
                       )}
                     </div>
                     <div className="card-actions">

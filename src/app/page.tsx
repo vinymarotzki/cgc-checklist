@@ -6,7 +6,7 @@ import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
 import Link from "next/link";
 import { Suspense } from "react";
-import { History, ClipboardList, Search, MessageSquare, Pencil, X, Lock, Settings } from "lucide-react";
+import { History, ArrowLeft, Search, MessageSquare, Pencil, X, Lock, Settings } from "lucide-react";
 import {
   STATUS_OPTIONS,
   getCategoryColor,
@@ -297,7 +297,17 @@ function ChecklistPage() {
       {/* Header */}
       <header className="app-header">
         <div className="app-header-inner">
-          <div />
+          <Link
+            href="/checklists"
+            style={{
+              color: "#7A82A0", fontSize: 13, textDecoration: "none",
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
+              transition: "all 0.15s"
+            }}
+          >
+            <ArrowLeft size={14} /> Checklists
+          </Link>
           <div className="app-nav">
             <Link
               href="/history"
@@ -309,17 +319,6 @@ function ChecklistPage() {
               }}
             >
               <History size={14} /> Histórico
-            </Link>
-            <Link
-              href="/checklists"
-              style={{
-                color: "#7A82A0", fontSize: 13, textDecoration: "none",
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
-                transition: "all 0.15s"
-              }}
-            >
-              <ClipboardList size={14} /> Checklists
             </Link>
             <Link
               href={`/admin?checklist=${encodeURIComponent(checklistId)}`}
