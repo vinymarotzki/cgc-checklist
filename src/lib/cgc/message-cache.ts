@@ -81,6 +81,42 @@ async function upsertActivity(groupId: string, activity: CgcActivity): Promise<v
   });
 }
 
+/** Quantas páginas buscar em paralelo no scan a frio — ver nota abaixo. */
+const COLD_SCAN_CONCURRENCY = 5;
+
+/**
+ * Processa uma página já buscada: grava no cache o que é novo (id > sinceId)
+ * e casa com a regra de campo do grupo. Devolve o maior id visto e se havia
+ * algo novo na página (usado só pelo scan sequencial, pra decidir se para).
+ */
+async function ingestBatch(
+  batch: SasiProviderMessage[],
+  group: CgcGroup,
+  fieldRule: ReturnType<typeof groupToFieldRule>,
+  sinceId: number
+): Promise<{ maxId: number; sawNew: boolean }> {
+  let maxId = sinceId;
+  let sawNew = false;
+
+  for (const message of batch) {
+    const id = typeof message.id === "number" ? message.id : null;
+    if (id === null || id <= sinceId) continue;
+    sawNew = true;
+    if (id > maxId) maxId = id;
+
+    if (fieldRule && !messageMatchesFieldRule(message, fieldRule)) continue;
+
+    try {
+      const activity = mapMessageToActivity(message, { groupName: group.name });
+      await upsertActivity(group.id, activity);
+    } catch {
+      // Mensagem irrecuperável: pula, não derruba a sincronização inteira.
+    }
+  }
+
+  return { maxId, sawNew };
+}
+
 /**
  * Sincroniza o cache do grupo com o que há de novo na API SASI, respeitando o
  * TTL. Não lança: falha de rede/API deixa o cache como está (ainda servível,
@@ -97,40 +133,61 @@ export async function syncGroupMessages(group: CgcGroup, token: string): Promise
   const fieldRule = groupToFieldRule(group);
 
   try {
-    let scanned = 0;
-    let page = 1;
     let maxId = sinceId;
 
-    while (scanned < SCAN_CAP) {
-      const batch: SasiProviderMessage[] = await fetchProviderMessages(
-        { ...baseQuery, page, limit: SASI_MESSAGES_MAX_LIMIT },
-        { token }
-      );
-      if (batch.length === 0) break;
-      scanned += batch.length;
+    if (sinceId === 0) {
+      // Primeira sincronização do grupo (cache vazio): não há marca d'água
+      // pra decidir "parar cedo" — toda mensagem do canal conta como nova de
+      // qualquer forma. Buscar as páginas do teto (SCAN_CAP) em paralelo em
+      // vez de uma de cada vez corta a espera de ~5x a latência da API SASI
+      // pra ~1x, que é o motivo da lista demorar tanto pra aparecer na
+      // primeira visita a um grupo.
+      const maxPages = Math.ceil(SCAN_CAP / SASI_MESSAGES_MAX_LIMIT);
+      for (let start = 1; start <= maxPages; start += COLD_SCAN_CONCURRENCY) {
+        const pages = Array.from(
+          { length: Math.min(COLD_SCAN_CONCURRENCY, maxPages - start + 1) },
+          (_, i) => start + i
+        );
+        const batches = await Promise.all(
+          pages.map((page) =>
+            fetchProviderMessages({ ...baseQuery, page, limit: SASI_MESSAGES_MAX_LIMIT }, { token })
+          )
+        );
 
-      let sawNew = false;
-      for (const message of batch) {
-        const id = typeof message.id === "number" ? message.id : null;
-        if (id === null || id <= sinceId) continue;
-        sawNew = true;
-        if (id > maxId) maxId = id;
-
-        if (fieldRule && !messageMatchesFieldRule(message, fieldRule)) continue;
-
-        try {
-          const activity = mapMessageToActivity(message, { groupName: group.name });
-          await upsertActivity(group.id, activity);
-        } catch {
-          // Mensagem irrecuperável: pula, não derruba a sincronização inteira.
+        let sawEmptyPage = false;
+        for (const batch of batches) {
+          if (batch.length === 0) {
+            sawEmptyPage = true;
+            continue;
+          }
+          const { maxId: batchMaxId } = await ingestBatch(batch, group, fieldRule, sinceId);
+          if (batchMaxId > maxId) maxId = batchMaxId;
         }
+        if (sawEmptyPage) break;
       }
+    } else {
+      // Já sincronizado antes: varredura incremental sequencial, que resolve
+      // em zero ou uma chamada no caso comum (nada novo desde o último poll).
+      let scanned = 0;
+      let page = 1;
 
-      // Página sem nada novo: assume que o resto já foi visto e para de paginar.
-      if (!sawNew) break;
-      if (batch.length < SASI_MESSAGES_MAX_LIMIT) break;
-      if (scanned >= SCAN_CAP) break;
-      page += 1;
+      while (scanned < SCAN_CAP) {
+        const batch: SasiProviderMessage[] = await fetchProviderMessages(
+          { ...baseQuery, page, limit: SASI_MESSAGES_MAX_LIMIT },
+          { token }
+        );
+        if (batch.length === 0) break;
+        scanned += batch.length;
+
+        const { maxId: batchMaxId, sawNew } = await ingestBatch(batch, group, fieldRule, sinceId);
+        if (batchMaxId > maxId) maxId = batchMaxId;
+
+        // Página sem nada novo: assume que o resto já foi visto e para de paginar.
+        if (!sawNew) break;
+        if (batch.length < SASI_MESSAGES_MAX_LIMIT) break;
+        if (scanned >= SCAN_CAP) break;
+        page += 1;
+      }
     }
 
     await saveSyncState(group.id, maxId);
