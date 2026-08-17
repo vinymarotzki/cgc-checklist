@@ -158,28 +158,134 @@ select option {
 }
 
 /* Botão de comentário de cada atividade do CGC. Alvo de clique pequeno e sem
-   hover antes fazia o botão parecer decorativo em vez de interativo. */
+   hover antes fazia o botão parecer decorativo em vez de interativo. Quando a
+   atividade já tem comentário o botão fica destacado em repouso (não só no
+   hover), pra ficar óbvio que há algo pra ler ali. */
 .cgc-comment-button {
+  position: relative;
   background: transparent;
   border: 1px solid var(--border);
+  color: #4A5270;
   border-radius: 6px;
   padding: 6px 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 5px;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .cgc-comment-button:hover {
   background: rgba(59, 110, 245, 0.14);
   border-color: var(--accent);
+  color: #60A5FA;
 }
 
-.cgc-comment-count {
-  font-size: 11px;
+.cgc-comment-button[data-has-notes="true"] {
+  color: #60A5FA;
+  background: rgba(59, 110, 245, 0.12);
+  border-color: var(--accent-dim);
+}
+
+.cgc-comment-button[data-has-notes="true"]:hover {
+  background: rgba(59, 110, 245, 0.22);
+  border-color: var(--accent);
+}
+
+.cgc-comment-badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  font-size: 10px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 16px;
+  text-align: center;
+  border: 2px solid var(--surface);
+}
+
+/* Caixa de comentários de uma atividade do CGC: antes eram parágrafos soltos
+   sem autor/data nem separação entre eles, difícil de distinguir um
+   comentário do outro. Agora cada nota é um bloco com cabeçalho (autor + hora)
+   e as ações de editar/apagar só aparecem destacadas com o mouse em cima. */
+.cgc-notes-box {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.cgc-note {
+  padding: 8px 10px;
+}
+
+.cgc-note + .cgc-note {
+  border-top: 1px solid var(--border);
+}
+
+.cgc-note-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cgc-note-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.cgc-note-dot {
+  color: var(--muted);
+}
+
+.cgc-note-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.cgc-note-action {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  border-radius: 5px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.cgc-note-action:hover {
+  background: rgba(96, 165, 250, 0.15);
+  color: #60A5FA;
+}
+
+.cgc-note-action-danger:hover {
+  background: rgba(248, 113, 113, 0.15);
+  color: #F87171;
+}
+
+.cgc-note-text {
+  color: #C8CAD6;
+  font-size: 12.5px;
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
 }
 
 .history-header-left {

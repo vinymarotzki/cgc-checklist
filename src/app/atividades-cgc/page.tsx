@@ -86,6 +86,12 @@ function formatDate(value: string | null) {
   return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+function formatNoteTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
 function isOverdue(iso: string | null) {
   if (!iso) return false;
   const date = new Date(iso);
@@ -807,31 +813,43 @@ function AtividadesCgcPage() {
                               </>
                             )}
 
-                            {(observationsByActivity[activity.id] || []).map((note) => (
-                              <div key={note.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, marginTop: 4 }}>
-                                <p style={{ color: "#4A5270", fontSize: 12, margin: 0, fontStyle: "italic", flex: 1, minWidth: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.5, display: "flex", alignItems: "flex-start", gap: 5 }}>
-                                  <MessageSquare size={12} style={{ flexShrink: 0, marginTop: 2 }} /> {note.text}
-                                </p>
-                                <button
-                                  onClick={() => {
-                                    setActiveActivityId(activity.id);
-                                    setEditingNoteId(note.id);
-                                    setObsValue(note.text);
-                                  }}
-                                  title="Editar comentário"
-                                  style={{ background: "transparent", border: "none", padding: 4, cursor: "pointer", color: "#60A5FA", display: "flex" }}
-                                >
-                                  <Pencil size={12} />
-                                </button>
-                                <button
-                                  onClick={() => deleteObs(note.id)}
-                                  title="Apagar comentário"
-                                  style={{ background: "transparent", border: "none", padding: 4, cursor: "pointer", color: "#F87171", display: "flex" }}
-                                >
-                                  <X size={12} />
-                                </button>
+                            {(observationsByActivity[activity.id] || []).length > 0 && (
+                              <div className="cgc-notes-box">
+                                {(observationsByActivity[activity.id] || []).map((note) => (
+                                  <div key={note.id} className="cgc-note">
+                                    <div className="cgc-note-head">
+                                      <span className="cgc-note-meta">
+                                        <MessageSquare size={11} />
+                                        {note.user_name || "Usuário"}
+                                        <span className="cgc-note-dot">·</span>
+                                        {formatNoteTime(note.updated_at || note.created_at)}
+                                      </span>
+                                      <span className="cgc-note-actions">
+                                        <button
+                                          onClick={() => {
+                                            setActiveActivityId(activity.id);
+                                            setEditingNoteId(note.id);
+                                            setObsValue(note.text);
+                                          }}
+                                          title="Editar comentário"
+                                          className="cgc-note-action"
+                                        >
+                                          <Pencil size={12} />
+                                        </button>
+                                        <button
+                                          onClick={() => deleteObs(note.id)}
+                                          title="Apagar comentário"
+                                          className="cgc-note-action cgc-note-action-danger"
+                                        >
+                                          <X size={12} />
+                                        </button>
+                                      </span>
+                                    </div>
+                                    <p className="cgc-note-text">{note.text}</p>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
+                            )}
                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
                               <span style={{
                                 fontSize: 11, fontWeight: 600, borderRadius: 4, padding: "2px 8px",
@@ -878,15 +896,17 @@ function AtividadesCgcPage() {
                                 setEditingNoteId(null);
                                 setObsValue("");
                               }}
-                              title="Novo comentário"
+                              title={
+                                (observationsByActivity[activity.id] || []).length > 0
+                                  ? "Ver ou adicionar comentário"
+                                  : "Novo comentário"
+                              }
                               className="cgc-comment-button"
-                              style={{
-                                color: (observationsByActivity[activity.id] || []).length > 0 ? "#60A5FA" : "#4A5270"
-                              }}
+                              data-has-notes={(observationsByActivity[activity.id] || []).length > 0}
                             >
-                              <MessageSquare size={14} />
+                              <MessageSquare size={15} />
                               {(observationsByActivity[activity.id] || []).length > 0 && (
-                                <span className="cgc-comment-count">
+                                <span className="cgc-comment-badge">
                                   {(observationsByActivity[activity.id] || []).length}
                                 </span>
                               )}
