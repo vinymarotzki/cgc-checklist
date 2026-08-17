@@ -462,14 +462,34 @@ function ChecklistsPage() {
             {checklists.map((checklist) => (
               <div
                 key={checklist.id}
+                className="split-card"
                 style={{
-                  position: "relative",
                   background: "#181C27", border: "1px solid #2A3045",
                   borderLeft: `3px solid ${progressColor(checklist.progress)}`,
                   borderRadius: 10, padding: 12
                 }}
               >
-                <div className="absolute top-2 right-2 flex items-center gap-1">
+                <div style={{ minWidth: 0 }}>
+                  <h2 style={{ margin: "0 0 10px", fontSize: 17, fontWeight: 700 }}>{checklist.title}</h2>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#7A82A0", fontSize: 12 }}>
+                      {formatDate(checklist.created_at)}
+                    </span>
+                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#7A82A0", fontSize: 12 }}>
+                      {checklist.created_by_name || "Sem autor"}
+                    </span>
+                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#7A82A0", fontSize: 12 }}>
+                      {checklist.completed_count}/{checklist.activity_count} atividades
+                    </span>
+                  </div>
+                  <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ height: 8, background: "#1E2333", borderRadius: 999, overflow: "hidden", width: 220, maxWidth: "100%" }}>
+                      <div style={{ width: `${checklist.progress}%`, height: "100%", background: progressColor(checklist.progress), borderRadius: 999, transition: "width 0.4s ease" }} />
+                    </div>
+                    <span style={{ color: "#E8EAF0", fontSize: 13, fontWeight: 700 }}>{checklist.progress}%</span>
+                  </div>
+                </div>
+                <div className="card-actions">
                   <Button
                     variant="outline"
                     size="icon-sm"
@@ -543,26 +563,6 @@ function ChecklistsPage() {
                       />
                     </span>
                   </Button>
-                </div>
-                <div style={{ minWidth: 0, paddingRight: 140 }}>
-                  <h2 style={{ margin: "0 0 10px", fontSize: 17, fontWeight: 700 }}>{checklist.title}</h2>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#7A82A0", fontSize: 12 }}>
-                      {formatDate(checklist.created_at)}
-                    </span>
-                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#7A82A0", fontSize: 12 }}>
-                      {checklist.created_by_name || "Sem autor"}
-                    </span>
-                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#7A82A0", fontSize: 12 }}>
-                      {checklist.completed_count}/{checklist.activity_count} atividades
-                    </span>
-                  </div>
-                  <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ height: 8, background: "#1E2333", borderRadius: 999, overflow: "hidden", width: 220, maxWidth: "100%" }}>
-                      <div style={{ width: `${checklist.progress}%`, height: "100%", background: progressColor(checklist.progress), borderRadius: 999, transition: "width 0.4s ease" }} />
-                    </div>
-                    <span style={{ color: "#E8EAF0", fontSize: 13, fontWeight: 700 }}>{checklist.progress}%</span>
-                  </div>
                 </div>
               </div>
             ))}
