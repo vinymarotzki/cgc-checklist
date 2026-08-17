@@ -1,0 +1,233 @@
+/**
+ * Cache local das atividades do CGC, para a listagem de um grupo não escanear
+ * a API SASI a cada request.
+ *
+ * Mesma técnica de `group-totals.ts` (marca d'água por `last_message_id`,
+ * incremental, `GET /provider/messages` newest-first), mas aqui o que é
+ * persistido é a atividade mapeada inteira, não só a contagem — assim busca,
+ * filtro de status e paginação da listagem podem ler direto do banco em vez
+ * de reconsultar o provider toda vez.
+ *
+ * TTL curto (`SYNC_TTL_MS`) porque o objetivo aqui é atividade nova aparecer
+ * rápido, ao contrário do TTL de 2 min de `group-totals.ts` (só um número na
+ * tela de seleção). Dentro do TTL a sincronização nem tenta: serve direto do
+ * cache. Fora dele, tenta — mas como é incremental, o caso comum (nada novo)
+ * resolve em uma chamada só, não nas ~5 de uma varredura completa.
+ */
+
+import { getDb, initDb } from "@/lib/db";
+import { getStatuses, backfillGroup } from "./status-store";
+import { groupIsUnconfigured, groupToFieldRule, groupToMessagesQuery } from "./groups";
+import { mapMessageToActivity, messageMatchesFieldRule } from "./mapper";
+import { SasiApiError } from "@/lib/sasi-api/client";
+import { SASI_MESSAGES_MAX_LIMIT, fetchProviderMessages } from "@/lib/sasi-api/messages";
+import type { SasiProviderMessage } from "@/lib/sasi-api/types";
+import type { CgcActivity, CgcGroup } from "./types";
+
+const SYNC_TTL_MS = 15 * 1000;
+
+const SCAN_CAP = Number(process.env.SASI_CGC_SCAN_CAP) > 0
+  ? Number(process.env.SASI_CGC_SCAN_CAP)
+  : 500;
+
+interface SyncState {
+  lastMessageId: number | null;
+  syncedAt: string;
+}
+
+async function getSyncState(groupId: string): Promise<SyncState | null> {
+  await initDb();
+  const db = getDb();
+  const result = await db.execute({
+    sql: "SELECT last_message_id, synced_at FROM cgc_message_cache_sync WHERE group_id = ?",
+    args: [groupId],
+  });
+  const row = result.rows[0] as unknown as Record<string, unknown> | undefined;
+  if (!row) return null;
+  const lastMessageId = row.last_message_id;
+  return {
+    lastMessageId: lastMessageId === null || lastMessageId === undefined ? null : Number(lastMessageId),
+    syncedAt: String(row.synced_at),
+  };
+}
+
+async function saveSyncState(groupId: string, lastMessageId: number | null): Promise<void> {
+  await initDb();
+  const db = getDb();
+  await db.execute({
+    sql: `INSERT INTO cgc_message_cache_sync (group_id, last_message_id, synced_at)
+          VALUES (?, ?, ?)
+          ON CONFLICT(group_id) DO UPDATE SET
+            last_message_id = excluded.last_message_id,
+            synced_at = excluded.synced_at`,
+    args: [groupId, lastMessageId, new Date().toISOString()],
+  });
+}
+
+function isStale(state: SyncState | null): boolean {
+  if (!state) return true;
+  return Date.now() - new Date(state.syncedAt).getTime() >= SYNC_TTL_MS;
+}
+
+async function upsertActivity(groupId: string, activity: CgcActivity): Promise<void> {
+  const db = getDb();
+  await db.execute({
+    sql: `INSERT INTO cgc_message_cache (message_id, group_id, data_json, cached_at)
+          VALUES (?, ?, ?, ?)
+          ON CONFLICT(message_id) DO UPDATE SET
+            data_json = excluded.data_json,
+            cached_at = excluded.cached_at`,
+    args: [activity.id, groupId, JSON.stringify(activity), new Date().toISOString()],
+  });
+}
+
+/**
+ * Sincroniza o cache do grupo com o que há de novo na API SASI, respeitando o
+ * TTL. Não lança: falha de rede/API deixa o cache como está (ainda servível,
+ * só desatualizado) em vez de derrubar a listagem.
+ */
+export async function syncGroupMessages(group: CgcGroup, token: string): Promise<void> {
+  if (groupIsUnconfigured(group)) return;
+
+  const state = await getSyncState(group.id);
+  if (!isStale(state)) return;
+
+  const sinceId = state?.lastMessageId ?? 0;
+  const baseQuery = groupToMessagesQuery(group);
+  const fieldRule = groupToFieldRule(group);
+
+  try {
+    let scanned = 0;
+    let page = 1;
+    let maxId = sinceId;
+
+    while (scanned < SCAN_CAP) {
+      const batch: SasiProviderMessage[] = await fetchProviderMessages(
+        { ...baseQuery, page, limit: SASI_MESSAGES_MAX_LIMIT },
+        { token }
+      );
+      if (batch.length === 0) break;
+      scanned += batch.length;
+
+      let sawNew = false;
+      for (const message of batch) {
+        const id = typeof message.id === "number" ? message.id : null;
+        if (id === null || id <= sinceId) continue;
+        sawNew = true;
+        if (id > maxId) maxId = id;
+
+        if (fieldRule && !messageMatchesFieldRule(message, fieldRule)) continue;
+
+        try {
+          const activity = mapMessageToActivity(message, { groupName: group.name });
+          await upsertActivity(group.id, activity);
+        } catch {
+          // Mensagem irrecuperável: pula, não derruba a sincronização inteira.
+        }
+      }
+
+      // Página sem nada novo: assume que o resto já foi visto e para de paginar.
+      if (!sawNew) break;
+      if (batch.length < SASI_MESSAGES_MAX_LIMIT) break;
+      if (scanned >= SCAN_CAP) break;
+      page += 1;
+    }
+
+    await saveSyncState(group.id, maxId);
+  } catch (error) {
+    if (error instanceof SasiApiError) return;
+    throw error;
+  }
+}
+
+/** Busca pontual por id, direto do cache — usado pelo export do /controle. */
+export async function getCachedActivitiesByIds(ids: string[]): Promise<Map<string, CgcActivity>> {
+  const out = new Map<string, CgcActivity>();
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+  if (uniqueIds.length === 0) return out;
+
+  await initDb();
+  const db = getDb();
+
+  const BATCH_SIZE = 200;
+  for (let start = 0; start < uniqueIds.length; start += BATCH_SIZE) {
+    const batch = uniqueIds.slice(start, start + BATCH_SIZE);
+    const placeholders = batch.map(() => "?").join(", ");
+    const result = await db.execute({
+      sql: `SELECT message_id, data_json FROM cgc_message_cache WHERE message_id IN (${placeholders})`,
+      args: batch,
+    });
+    for (const row of result.rows as unknown as { message_id: string; data_json: string }[]) {
+      try {
+        out.set(row.message_id, JSON.parse(row.data_json) as CgcActivity);
+      } catch {
+        // Linha corrompida: ignora, chamador trata como não encontrada.
+      }
+    }
+  }
+
+  return out;
+}
+
+export interface ListActivitiesParams {
+  page: number;
+  limit: number;
+  search?: string;
+}
+
+export interface ListActivitiesResult {
+  activities: CgcActivity[];
+  total: number;
+}
+
+/**
+ * Lê a listagem do cache local (busca, status atual e paginação aplicados
+ * aqui, sem nova chamada à API SASI). Chamar `syncGroupMessages` antes.
+ */
+export async function listGroupActivities(
+  groupId: string,
+  params: ListActivitiesParams
+): Promise<ListActivitiesResult> {
+  await initDb();
+  const db = getDb();
+
+  const result = await db.execute({
+    sql: "SELECT data_json FROM cgc_message_cache WHERE group_id = ?",
+    args: [groupId],
+  });
+
+  let activities: CgcActivity[] = (result.rows as unknown as { data_json: string }[])
+    .map((row) => {
+      try {
+        return JSON.parse(row.data_json) as CgcActivity;
+      } catch {
+        return null;
+      }
+    })
+    .filter((activity): activity is CgcActivity => activity !== null);
+
+  const search = params.search?.trim().toLowerCase();
+  if (search) {
+    activities = activities.filter((activity) =>
+      activity.description?.toLowerCase().includes(search)
+    );
+  }
+
+  activities.sort((a, b) => (b.messageId ?? 0) - (a.messageId ?? 0));
+
+  const ids = activities.map((activity) => activity.id);
+  if (ids.length > 0) {
+    await backfillGroup(ids, groupId);
+    const statuses = await getStatuses(ids);
+    activities = activities.map((activity) => {
+      const status = statuses.get(activity.id);
+      return status ? { ...activity, status } : activity;
+    });
+  }
+
+  const total = activities.length;
+  const start = (params.page - 1) * params.limit;
+  const slice = activities.slice(start, start + params.limit);
+
+  return { activities: slice, total };
+}
