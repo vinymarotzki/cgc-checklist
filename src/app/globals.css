@@ -209,47 +209,104 @@ select option {
   border: 2px solid var(--surface);
 }
 
-/* Caixa de comentários de uma atividade do CGC: antes eram parágrafos soltos
-   sem autor/data nem separação entre eles, difícil de distinguir um
-   comentário do outro. Agora cada nota é um bloco com cabeçalho (autor + hora)
-   e as ações de editar/apagar só aparecem destacadas com o mouse em cima. */
+/* Linha com os toggles de "detalhes" e "comentários" de uma atividade do CGC.
+   Os dois usam o mesmo estilo de link discreto (.cgc-section-toggle) — antes
+   comentários ficavam sempre abertos, empurrando a lista inteira pra baixo em
+   atividades com várias notas; agora ficam escondidos até o usuário pedir. */
+.cgc-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.cgc-section-toggle {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #60A5FA;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease;
+}
+
+.cgc-section-toggle:hover {
+  color: #8FBBFA;
+}
+
+/* Comentários de uma atividade do CGC, em formato de bolha (avatar + autor +
+   hora + texto): antes eram parágrafos soltos sem autor nem data, difícil de
+   distinguir um comentário do outro. As ações de editar/apagar ficam sempre
+   visíveis (não só no hover) pra funcionar igual em telas touch. */
 .cgc-notes-box {
   display: flex;
   flex-direction: column;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   margin-top: 8px;
   overflow: hidden;
 }
 
 .cgc-note {
-  padding: 8px 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
 }
 
 .cgc-note + .cgc-note {
   border-top: 1px solid var(--border);
 }
 
-.cgc-note-head {
+.cgc-note-avatar {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: center;
 }
 
-.cgc-note-meta {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 600;
+.cgc-note-body {
+  flex: 1;
   min-width: 0;
 }
 
-.cgc-note-dot {
-  color: var(--muted);
+.cgc-note-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cgc-note-author {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cgc-note-time {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.cgc-note-text {
+  color: #C8CAD6;
+  font-size: 13px;
+  margin: 3px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
 }
 
 .cgc-note-actions {
@@ -261,8 +318,8 @@ select option {
 .cgc-note-action {
   background: transparent;
   border: none;
-  padding: 4px;
-  border-radius: 5px;
+  padding: 6px;
+  border-radius: 6px;
   cursor: pointer;
   color: var(--text-muted);
   display: flex;
@@ -279,13 +336,33 @@ select option {
   color: #F87171;
 }
 
-.cgc-note-text {
-  color: #C8CAD6;
-  font-size: 12.5px;
-  margin: 4px 0 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.55;
+/* Tablet: um pouco mais de respiro entre bolhas de comentário. */
+@media (max-width: 1024px) {
+  .cgc-note {
+    padding: 10px;
+  }
+}
+
+/* Mobile: telas estreitas ganham mais espaço tirando o avatar do caminho e
+   deixando nome/hora quebrarem linha em vez de espremer o texto. */
+@media (max-width: 480px) {
+  .cgc-note-avatar {
+    display: none;
+  }
+
+  .cgc-note {
+    padding: 9px 10px;
+    gap: 0;
+  }
+
+  .cgc-note-head {
+    gap: 6px;
+  }
+
+  /* Alvo de toque maior pro botão de comentário nesse tamanho de tela. */
+  .cgc-comment-button {
+    padding: 8px 12px;
+  }
 }
 
 .history-header-left {
