@@ -111,9 +111,9 @@ Tables: `checklists`, `activities`, `history`, `observations`, `completed_checkl
 The CGC tables are separate from the checklist ones on purpose: `/api/observations`
 writes to `history`, and `/api/history` does a `LEFT JOIN activities`, so a CGC comment
 routed through them would become an orphan row on the checklist history screen.
-`cgc_history` is denormalized on purpose (it stores group/description/priority/deadline
-alongside the change) because the source message lives in the SASI API and can leave the
-query window.
+`cgc_history` is denormalized on purpose (it stores group/description/deadline alongside
+the change) because the source message lives in the SASI API and can leave the query
+window.
 
 ### SASI API integration (`src/lib/sasi-api/`, `src/lib/cgc/`)
 
@@ -130,8 +130,10 @@ or auth header for `api.bone.sasi.io`. Contract facts that constrain the code:
   app (validated against `AUTH_USER_ENDPOINT`, a different host): `resolveSasiToken`
   therefore prefers `SASI_API_TOKEN` from `.env.local` over the user's own token —
   the user's token authenticates them locally but is not accepted by the Bone API.
-- There is no deadline/SLA field anywhere in the spec, and `raw.priority` is a boolean.
-  Both the deadline and the real priority are read out of the dynamic `data_fields[]`.
+- There is no deadline/SLA field anywhere in the spec; the deadline is read out of the
+  dynamic `data_fields[]`. Priority (Alta/Média/Baixa) is not a product feature — it was
+  removed, and `cgc/field-map.ts` keeps the raw `prioridades` field name only to exclude
+  it from the generic "Ver detalhes" list.
 - Messages come back newest-first (highest `id`/`created_at` on page 1) — confirmed
   empirically against channel `33397`, not documented in the spec. `group-totals.ts`
   (below) depends on this holding.
@@ -153,8 +155,8 @@ of one scan per group. Known gap: this only detects new messages, not deleted on
 the total never shrinks on its own.
 
 Field names for channel 33397 are pinned in `src/lib/cgc/field-map.ts`
-(`selecione_time` → group, `prioridades` → priority, `prazo_de_entrega` → deadline,
-`descreva` → description) and overridable by env so a rename does not need a deploy.
+(`selecione_time` → group, `prazo_de_entrega` → deadline, `descreva` → description) and
+overridable by env so a rename does not need a deploy.
 `src/lib/cgc/mapper.ts` must never throw on missing or unexpected data — a missing field
 becomes `null` and the UI shows an empty state. Do **not** surface `profileFields`: it
 carries the sender's phone, e-mail and birth date.

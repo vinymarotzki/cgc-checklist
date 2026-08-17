@@ -90,8 +90,6 @@ export interface SasiMessageRaw {
   id?: number;
   uuid?: string;
   text?: string;
-  /** Sinalizador de prioridade da mensagem — booleano, não escala. */
-  priority?: boolean;
   test?: boolean;
   anonymous?: boolean;
   generatedAt?: string;

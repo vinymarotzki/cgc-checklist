@@ -39,7 +39,6 @@ interface CgcGroupSummary {
 interface CgcConcludedActivity {
   id: string;
   description: string;
-  priority: string;
   deadline: string | null;
   comments: string;
   responsible: string;
@@ -123,11 +122,11 @@ function exportChecklistXlsx(checklist: CompletedChecklist, items: CompletedChec
 }
 
 function exportCgcXlsx(groupName: string, activities: CgcConcludedActivity[]) {
-  const headerRow = ["Grupo", "Descrição", "Prioridade", "Prazo", "Status", "Comentários", "Responsável", "Data da Conclusão"];
+  const headerRow = ["Grupo", "Descrição", "Prazo", "Status", "Comentários", "Responsável", "Data da Conclusão"];
   const rows: unknown[][] = [headerRow];
   activities.forEach((activity) => {
     rows.push([
-      groupName, activity.description, activity.priority, activity.deadline || "",
+      groupName, activity.description, activity.deadline || "",
       "CONCLUÍDO", activity.comments, activity.responsible, activity.updatedAt,
     ]);
   });

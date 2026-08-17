@@ -194,7 +194,6 @@ async function runMigrations() {
       group_id TEXT,
       group_name TEXT,
       description TEXT,
-      priority TEXT,
       deadline TEXT,
       old_status TEXT,
       new_status TEXT,
@@ -208,6 +207,14 @@ async function runMigrations() {
   await db.execute(
     `CREATE INDEX IF NOT EXISTS idx_cgc_history_created ON cgc_history (created_at DESC)`
   );
+
+  // Prioridade deixou de ser um recurso do produto; remove a coluna (e o dado
+  // já gravado) de bancos que ainda vieram do schema antigo.
+  try {
+    await db.execute(`ALTER TABLE cgc_history DROP COLUMN priority`);
+  } catch {
+    // Coluna já removida ou banco criado depois dessa migração, ignora.
+  }
 
   // Comentários das Atividades do CGC. Tabela separada de `observations` de
   // propósito: aquela rota grava em `history`, e /history faz LEFT JOIN com

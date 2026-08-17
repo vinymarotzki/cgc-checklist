@@ -17,8 +17,6 @@ import type {
   CgcActivity,
   CgcActivityField,
   CgcDeadline,
-  CgcPriority,
-  CgcPriorityLevel,
   CgcSasiStatus,
 } from "./types";
 
@@ -86,27 +84,6 @@ function findField(fields: SasiDataField[], wantedName: string): SasiDataField |
   }
 
   return null;
-}
-
-const PRIORITY_LEVELS: Array<{ level: CgcPriorityLevel; pattern: RegExp }> = [
-  { level: "ALTA", pattern: /^(alta|urgente|critica|high)$/ },
-  { level: "MEDIA", pattern: /^(media|moderada|normal|medium)$/ },
-  { level: "BAIXA", pattern: /^(baixa|low)$/ },
-];
-
-function mapPriority(message: SasiProviderMessage, fields: SasiDataField[]): CgcPriority {
-  const field = findField(fields, getFieldName("priority"));
-  const label = field ? pickFormattedValue(field) : null;
-
-  if (label) {
-    const normalized = normalizeForMatch(label);
-    const match = PRIORITY_LEVELS.find((entry) => entry.pattern.test(normalized));
-    return { level: match ? match.level : "OUTRA", label };
-  }
-
-  // Reserva: o booleano de destaque do contrato, quando o campo não veio.
-  if (message.raw?.priority === true) return { level: "ALTA", label: "Alta" };
-  return { level: "SEM_PRIORIDADE", label: "Sem prioridade" };
 }
 
 /**
@@ -357,8 +334,9 @@ export function extractDeadline(message: SasiProviderMessage): CgcDeadline | nul
  * que não fazem parte da atividade. O nome do remetente já é exibido à parte.
  *
  * Só entram campos visíveis com `formattedValue` preenchido — é onde a API põe
- * o conteúdo já resolvido. Os campos que já viram coluna fixa (grupo,
- * prioridade, prazo, descrição) são excluídos para não aparecerem duas vezes.
+ * o conteúdo já resolvido. Os campos que já viram coluna fixa (grupo, prazo,
+ * descrição) são excluídos para não aparecerem duas vezes, junto com o campo
+ * legado de prioridade (ver `LEGACY_PRIORITY_FIELD_NAME` em field-map.ts).
  */
 export function extractFields(message: SasiProviderMessage): CgcActivityField[] {
   const fields: CgcActivityField[] = [];
@@ -411,7 +389,6 @@ export function mapMessageToActivity(
       pickFormattedValue(findField(allFields, getFieldName("group")) ?? {}) ??
       teamName ??
       categoryName,
-    priority: mapPriority(message, allFields),
     deadline: extractDeadline(message),
     description: description ?? "Atividade sem descrição",
     fields,

@@ -15,7 +15,6 @@ interface CgcHistoryEntry {
   message_id: string;
   group_name: string | null;
   description: string | null;
-  priority: string | null;
   deadline: string | null;
   old_status: string | null;
   new_status: string | null;
@@ -71,7 +70,6 @@ interface CgcActivityGroup {
   messageId: string;
   title: string;
   groupName: string;
-  priority: string | null;
   deadline: string | null;
   entries: CgcHistoryEntry[];
   lastAt: string;
@@ -81,7 +79,7 @@ interface CgcActivityGroup {
 /** Primeiro valor não vazio do campo entre os eventos, do mais recente ao mais antigo. */
 function pickLatest(
   entries: CgcHistoryEntry[],
-  field: "description" | "group_name" | "priority" | "deadline"
+  field: "description" | "group_name" | "deadline"
 ): string | null {
   return entries.find((entry) => entry[field])?.[field] ?? null;
 }
@@ -91,7 +89,7 @@ function pickLatest(
  * seja uma atividade. listHistory devolve created_at DESC, então a primeira
  * entrada de cada grupo já é a mais recente.
  *
- * Título, grupo, prioridade e prazo saem do evento mais recente que os tenha,
+ * Título, grupo e prazo saem do evento mais recente que os tenha,
  * e não do primeiro: são denormalizados em cgc_history a partir do snapshot que
  * a tela envia, e eventos gravados sem snapshot (comentários apagados antes da
  * correção) têm esses campos nulos — herdá-los evita cair no id da mensagem.
@@ -112,7 +110,6 @@ function groupByActivity(entries: CgcHistoryEntry[]): CgcActivityGroup[] {
     messageId,
     title: pickLatest(groupEntries, "description") || `Atividade ${messageId}`,
     groupName: pickLatest(groupEntries, "group_name") || "—",
-    priority: pickLatest(groupEntries, "priority"),
     deadline: pickLatest(groupEntries, "deadline"),
     entries: groupEntries,
     lastAt: groupEntries[0].created_at,
@@ -353,9 +350,6 @@ function CgcHistoryPage() {
                         <span className="history-group-head">
                           <span className="history-group-badges">
                             <span className="history-category-badge">{group.groupName}</span>
-                            {group.priority && (
-                              <span className="history-category-badge">{group.priority}</span>
-                            )}
                             {group.deadline && (
                               <span className="history-category-badge">Prazo: {group.deadline}</span>
                             )}
