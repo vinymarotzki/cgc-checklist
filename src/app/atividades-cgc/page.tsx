@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import {
   STATUS_OPTIONS,
-  getStatusColor,
   getStatusStyle,
 } from "@/lib/checklist-status";
 import type {
@@ -636,69 +635,6 @@ function AtividadesCgcPage() {
       {header}
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 24px" }}>
-        {/* Visão geral */}
-        <div style={{
-          background: "#181C27", border: "1px solid #2A3045", borderLeft: `4px solid ${getCgcGroupColor(group?.name)}`,
-          borderRadius: 12, padding: 16, marginBottom: 18
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
-              <div style={{ textAlign: "center", flexShrink: 0 }}>
-                <div style={{ color: "#E8EAF0", fontSize: 36, fontWeight: 800, lineHeight: 1 }}>{completionPct}%</div>
-                <div style={{ color: "#4A5270", fontSize: 11, marginTop: 4 }}>concluído</div>
-              </div>
-              <div>
-                <h1 style={{ color: "#E8EAF0", fontSize: 22, fontWeight: 700, margin: 0 }}>
-                  {group?.name || "Grupo selecionado"}
-                </h1>
-                <p style={{ color: "#7A82A0", fontSize: 13, marginTop: 4 }}>
-                  {total ?? stats.total} atividades
-                  {lastSync && (
-                    <span style={{ color: "#4A5270" }}> · sincronizado {formatClock(lastSync)}</span>
-                  )}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => fetchActivities({ showIndicator: true })}
-              disabled={refreshing}
-              style={{
-                background: "transparent", border: "1px solid #2A3045", color: "#7A82A0",
-                borderRadius: 6, padding: "8px 14px", fontSize: 13,
-                cursor: refreshing ? "not-allowed" : "pointer",
-                display: "flex", alignItems: "center", gap: 6
-              }}
-            >
-              <RefreshCw size={14} className={refreshing ? "spin-icon" : undefined} /> {refreshing ? "Atualizando..." : "Atualizar"}
-            </button>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20 }}>
-            {[
-              { label: "Concluídas", value: stats.done, color: "#34D399" },
-              { label: "Em andamento", value: stats.inProgress, color: "#60A5FA" },
-              { label: "Não iniciadas", value: notStarted, color: "#F87171" },
-              { label: "Impedidas", value: stats.blocked, color: "#FBBF24" },
-            ].map((stat) => (
-              <div key={stat.label} style={{
-                flex: "1 1 120px", background: "#1E2333", border: "1px solid #2A3045",
-                borderRadius: 10, padding: "10px 14px"
-              }}>
-                <div style={{ color: stat.color, fontSize: 18, fontWeight: 700, lineHeight: 1 }}>{stat.value}</div>
-                <div style={{ color: "#7A82A0", fontSize: 11, marginTop: 4 }}>{stat.label}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ marginTop: 18 }}>
-            <div style={{ background: "#1E2333", borderRadius: 999, height: 10, overflow: "hidden", display: "flex" }}>
-              <div style={{ height: "100%", width: `${notStartedPct}%`, background: getStatusColor("NAO_INICIADO"), transition: "width 0.5s ease" }} />
-              <div style={{ height: "100%", width: `${inProgressPct}%`, background: getStatusColor("EM_ANDAMENTO"), transition: "width 0.5s ease" }} />
-              <div style={{ height: "100%", width: `${donePct}%`, background: getStatusColor("CONCLUIDO"), transition: "width 0.5s ease" }} />
-            </div>
-          </div>
-        </div>
-
         {/* Filtros */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
           <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
