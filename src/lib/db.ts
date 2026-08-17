@@ -20,7 +20,23 @@ export function getDb() {
   return client;
 }
 
+let migration: Promise<void> | null = null;
+
+/**
+ * `initDb` é chamada no início de toda rota (às vezes mais de uma vez por
+ * requisição, via helpers como `getStatuses`/`backfillGroup`), e roda ~20
+ * CREATE/ALTER TABLE sequenciais contra o Turso — cada um é uma ida à rede.
+ * Rodar isso de novo a cada chamada é o que fazia qualquer tela demorar
+ * segundos: o schema não muda depois do primeiro request, então a migração
+ * só precisa rodar uma vez por processo. Chamadas concorrentes na largada
+ * aguardam a mesma promise em vez de disparar a migração em paralelo.
+ */
 export async function initDb() {
+  if (!migration) migration = runMigration();
+  return migration;
+}
+
+async function runMigration() {
   const db = getDb();
 
   await db.execute(`

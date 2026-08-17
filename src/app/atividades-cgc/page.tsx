@@ -8,7 +8,7 @@ import { useSasiToken } from "@/hooks/useSasiToken";
 import { getCgcGroupColor } from "@/lib/cgc/colors";
 import {
   ArrowLeft, ChevronUp, ChevronDown, Pencil, X, MessageSquare,
-  History, Search, Lock, RefreshCw, ListFilter, ExternalLink,
+  History, Search, Lock, RefreshCw, ExternalLink,
 } from "lucide-react";
 import {
   STATUS_OPTIONS,
@@ -276,15 +276,21 @@ function AtividadesCgcPage() {
   useEffect(() => {
     let active = true;
     (async () => {
-      await fetchGroups();
-      await fetchActivities();
-      await fetchObservations();
+      // Cada chamada paga sozinha o custo de autenticar contra o
+      // AUTH_USER_ENDPOINT; encadeá-las (await sequencial) somava esse custo
+      // 2-3 vezes antes da tela aparecer. `groups` só é usado na tela de
+      // seleção, então dentro de um grupo nem precisa ser buscado.
+      if (groupId) {
+        await Promise.all([fetchActivities(), fetchObservations()]);
+      } else {
+        await fetchGroups();
+      }
       if (active) setLoading(false);
     })();
     return () => {
       active = false;
     };
-  }, [fetchGroups, fetchActivities, fetchObservations]);
+  }, [groupId, fetchGroups, fetchActivities, fetchObservations]);
 
   // Sincronização automática. Sem indicador visual: recarregar a lista a cada
   // ciclo não pode piscar a tela nem atrapalhar quem está mexendo nela.
@@ -484,7 +490,9 @@ function AtividadesCgcPage() {
               <ArrowLeft size={14} /> Grupos
             </Link>
           )}
-          <span style={{ color: "#E8EAF0", fontSize: 15, fontWeight: 600 }}>Atividades do CGC</span>
+          <span style={{ color: "#E8EAF0", fontSize: 15, fontWeight: 600 }}>
+            {groupId ? (group?.name || "Atividades do CGC") : "Atividades do CGC"}
+          </span>
         </div>
         <div className="app-nav">
           <Link
@@ -496,16 +504,6 @@ function AtividadesCgcPage() {
             }}
           >
             <History size={14} /> Histórico
-          </Link>
-          <Link
-            href="/checklists"
-            style={{
-              color: "#7A82A0", fontSize: 13, textDecoration: "none",
-              padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
-              display: "flex", alignItems: "center", gap: 6
-            }}
-          >
-            <ListFilter size={14} /> Checklists
           </Link>
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
@@ -534,9 +532,6 @@ function AtividadesCgcPage() {
         <main style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
           <div style={{ marginBottom: 20 }}>
             <h1 style={{ color: "#E8EAF0", fontSize: 22, fontWeight: 700, margin: 0 }}>Selecione um grupo</h1>
-            <p style={{ color: "#7A82A0", fontSize: 13, marginTop: 4 }}>
-              Escolha o grupo responsável para visualizar as atividades recebidas da API SASI.
-            </p>
           </div>
 
           {apiError && (
@@ -629,13 +624,6 @@ function AtividadesCgcPage() {
     acc[note.message_id].push(note);
     return acc;
   }, {});
-
-  const stats = getStats(activities);
-  const notStarted = stats.total - stats.done - stats.inProgress - stats.blocked;
-  const completionPct = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
-  const notStartedPct = stats.total > 0 ? (notStarted / stats.total) * 100 : 0;
-  const inProgressPct = stats.total > 0 ? (stats.inProgress / stats.total) * 100 : 0;
-  const donePct = stats.total > 0 ? (stats.done / stats.total) * 100 : 0;
 
   const filtered = activities.filter(
     (activity) => statusFilter === "TODOS" || activity.status === statusFilter

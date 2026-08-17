@@ -180,28 +180,54 @@ export async function GET(req: NextRequest) {
 
     // Com roteamento por campo: varre páginas da API até o teto, filtra e
     // pagina localmente — só assim a contagem e as páginas ficam corretas.
+    // O /count devolve quantas páginas existem de antemão, então elas são
+    // buscadas em paralelo em vez de uma requisição esperando a outra — é
+    // isso que fazia a tela demorar segundos pra abrir um grupo.
     const matched: SasiProviderMessage[] = [];
     let scanned = 0;
     let truncated = false;
-    let apiPage = 1;
 
-    while (scanned < SCAN_CAP) {
-      const batch = await fetchProviderMessages(
-        { ...baseQuery, page: apiPage, limit: SASI_MESSAGES_MAX_LIMIT },
-        { token: sasiToken }
+    const scanCount = await fetchProviderMessagesCount(baseQuery, { token: sasiToken }).catch(() => null);
+
+    if (scanCount !== null) {
+      const pageCount = Math.ceil(Math.min(scanCount, SCAN_CAP) / SASI_MESSAGES_MAX_LIMIT);
+      const batches = await Promise.all(
+        Array.from({ length: pageCount }, (_, index) =>
+          fetchProviderMessages(
+            { ...baseQuery, page: index + 1, limit: SASI_MESSAGES_MAX_LIMIT },
+            { token: sasiToken }
+          )
+        )
       );
 
-      scanned += batch.length;
-      for (const message of batch) {
-        if (messageMatchesFieldRule(message, fieldRule)) matched.push(message);
+      for (const batch of batches) {
+        scanned += batch.length;
+        for (const message of batch) {
+          if (messageMatchesFieldRule(message, fieldRule)) matched.push(message);
+        }
       }
+      truncated = scanCount > SCAN_CAP;
+    } else {
+      // /count indisponível: cai para a varredura sequencial página a página.
+      let apiPage = 1;
+      while (scanned < SCAN_CAP) {
+        const batch = await fetchProviderMessages(
+          { ...baseQuery, page: apiPage, limit: SASI_MESSAGES_MAX_LIMIT },
+          { token: sasiToken }
+        );
 
-      if (batch.length < SASI_MESSAGES_MAX_LIMIT) break;
-      if (scanned >= SCAN_CAP) {
-        truncated = true;
-        break;
+        scanned += batch.length;
+        for (const message of batch) {
+          if (messageMatchesFieldRule(message, fieldRule)) matched.push(message);
+        }
+
+        if (batch.length < SASI_MESSAGES_MAX_LIMIT) break;
+        if (scanned >= SCAN_CAP) {
+          truncated = true;
+          break;
+        }
+        apiPage += 1;
       }
-      apiPage += 1;
     }
 
     const start = (page - 1) * limit;
