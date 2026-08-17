@@ -530,7 +530,7 @@ function AtividadesCgcPage() {
         {header}
         <main style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
           <div style={{ marginBottom: 20 }}>
-            <h1 style={{ color: "#E8EAF0", fontSize: 22, fontWeight: 700, margin: 0 }}>Selecione um grupo</h1>
+            <h1 style={{ color: "#E8EAF0", fontSize: 22, fontWeight: 700, margin: 0 }}>Atividades por Grupo:</h1>
           </div>
 
           {apiError && (
