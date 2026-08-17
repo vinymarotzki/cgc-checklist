@@ -478,14 +478,7 @@ function AtividadesCgcPage() {
       <div className="app-header-inner">
         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           {groupId && (
-            <Link
-              href="/atividades-cgc"
-              style={{
-                color: "#7A82A0", fontSize: 13, textDecoration: "none",
-                padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
-                display: "flex", alignItems: "center", gap: 6
-              }}
-            >
+            <Link href="/atividades-cgc" className="cgc-back-link">
               <ArrowLeft size={14} /> Grupos
             </Link>
           )}
@@ -549,7 +542,6 @@ function AtividadesCgcPage() {
           ) : (
             <div style={{ display: "grid", gap: 12 }}>
               {sortGroupsByDisplayOrder(groups).map((item) => {
-                const color = getCgcGroupColor(item.name);
                 const configured = Boolean(
                   item.channel_ids || item.data_field_value || item.category_ids ||
                   item.team_name || item.app_ids
@@ -565,7 +557,7 @@ function AtividadesCgcPage() {
                     className="split-card"
                     style={{
                       background: "#181C27", border: "1px solid #2A3045", borderRadius: 10,
-                      padding: 12, borderLeft: `4px solid ${color}`
+                      padding: 12
                     }}
                   >
                     <div style={{ minWidth: 0 }}>
@@ -887,13 +879,17 @@ function AtividadesCgcPage() {
                                 setObsValue("");
                               }}
                               title="Novo comentário"
+                              className="cgc-comment-button"
                               style={{
-                                background: "transparent", border: "1px solid #2A3045",
-                                borderRadius: 6, padding: "5px 8px", cursor: "pointer", display: "flex",
                                 color: (observationsByActivity[activity.id] || []).length > 0 ? "#60A5FA" : "#4A5270"
                               }}
                             >
                               <MessageSquare size={14} />
+                              {(observationsByActivity[activity.id] || []).length > 0 && (
+                                <span className="cgc-comment-count">
+                                  {(observationsByActivity[activity.id] || []).length}
+                                </span>
+                              )}
                             </button>
 
                             {isSavingThis && (

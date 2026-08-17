@@ -135,6 +135,53 @@ select option {
   border: 1px solid var(--border);
 }
 
+/* Botão "voltar" da tela de atividades do CGC (topo, volta pra seleção de
+   grupo). Sem feedback de hover antes, ficava indistinguível de texto estático. */
+.cgc-back-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.cgc-back-link:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent-dim);
+}
+
+/* Botão de comentário de cada atividade do CGC. Alvo de clique pequeno e sem
+   hover antes fazia o botão parecer decorativo em vez de interativo. */
+.cgc-comment-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.cgc-comment-button:hover {
+  background: rgba(59, 110, 245, 0.14);
+  border-color: var(--accent);
+}
+
+.cgc-comment-count {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .history-header-left {
   display: flex;
   align-items: center;
