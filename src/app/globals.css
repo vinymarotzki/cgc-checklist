@@ -800,6 +800,19 @@ select option {
   flex-wrap: wrap;
 }
 
+/* Rótulo de texto ao lado do ícone num botão de ação de card — só em telas
+   largas o suficiente pra caber sem apertar. Usada em vários botões
+   (checklists, atividades do CGC, controle); definida uma vez só aqui. */
+.btn-label-desktop {
+  display: inline;
+}
+
+@media (max-width: 768px) {
+  .btn-label-desktop {
+    display: none;
+  }
+}
+
 /* Duas colunas que viram uma só quando a tela aperta. */
 .two-col {
   display: grid;
