@@ -6,9 +6,8 @@ import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
 import { getStatusColor } from "@/lib/checklist-status";
 import * as XLSX from "xlsx";
-import { Lock, RefreshCw, Plus, ExternalLink, Pencil, Trash2, Upload, MenuIcon, XIcon } from "lucide-react";
+import { Lock, RefreshCw, Plus, ExternalLink, Pencil, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 interface ChecklistSummary {
   id: string;
@@ -169,8 +168,6 @@ function ChecklistsPage() {
   const [parseError, setParseError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  // Toggle hamburger/close por card: abrir revela Editar/Excluir, fechar esconde.
-  const [openActionsId, setOpenActionsId] = useState<string | null>(null);
   const [rawRows, setRawRows] = useState<unknown[][]>([]);
   const [headerRowIndex, setHeaderRowIndex] = useState<number | null>(null);
   const [detectedColumns, setDetectedColumns] = useState<string[]>([]);
@@ -492,75 +489,39 @@ function ChecklistsPage() {
                 <div className="card-actions">
                   <Button
                     variant="outline"
-                    size="icon-sm"
+                    size="sm"
                     nativeButton={false}
                     style={{ background: "#1E2333", borderColor: "#3B6EF5", color: "#E8EAF0" }}
                     aria-label="Abrir checklist"
                     title="Abrir checklist"
                     render={<Link href={`/?checklist=${encodeURIComponent(checklist.id)}`} />}
                   >
-                    <ExternalLink />
+                    <ExternalLink /> <span className="btn-label-desktop">Abrir</span>
                   </Button>
-                  {openActionsId === checklist.id && (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        style={{ background: "#3B82F6", borderColor: "#3B6EF5", color: "#E8EAF0" }}
-                        aria-label="Editar checklist"
-                        title="Editar checklist"
-                        onClick={() => {
-                          openEditModal(checklist);
-                          setOpenActionsId(null);
-                        }}
-                      >
-                        <Pencil />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon-sm"
-                        style={{ background: "transparent", borderColor: "#3A2430", color: "#F87171" }}
-                        aria-label={deletingId === checklist.id ? "Excluindo..." : "Excluir checklist"}
-                        title={deletingId === checklist.id ? "Excluindo..." : "Excluir checklist"}
-                        disabled={deletingId === checklist.id}
-                        onClick={() => deleteChecklist(checklist.id)}
-                      >
-                        <Trash2 />
-                      </Button>
-                    </>
-                  )}
                   <Button
                     type="button"
                     variant="outline"
-                    size="icon-sm"
-                    style={{ background: "#1E2333", borderColor: "#2A3045", color: "#7A82A0" }}
-                    aria-label={openActionsId === checklist.id ? "Fechar ações" : "Abrir ações"}
-                    aria-expanded={openActionsId === checklist.id}
-                    onClick={() =>
-                      setOpenActionsId((prev) => (prev === checklist.id ? null : checklist.id))
-                    }
+                    size="sm"
+                    style={{ background: "#1E2333", borderColor: "#2A3045", color: "#C8CAD6" }}
+                    aria-label="Editar checklist"
+                    title="Editar checklist"
+                    onClick={() => openEditModal(checklist)}
                   >
-                    <span className="relative flex size-4 items-center justify-center">
-                      <MenuIcon
-                        aria-hidden="true"
-                        className={cn(
-                          "absolute size-4 transition-all duration-200",
-                          openActionsId === checklist.id
-                            ? "scale-75 rotate-90 opacity-0"
-                            : "scale-100 rotate-0 opacity-100"
-                        )}
-                      />
-                      <XIcon
-                        aria-hidden="true"
-                        className={cn(
-                          "absolute size-4 transition-all duration-200",
-                          openActionsId === checklist.id
-                            ? "scale-100 rotate-0 opacity-100"
-                            : "scale-75 -rotate-90 opacity-0"
-                        )}
-                      />
+                    <Pencil /> <span className="btn-label-desktop">Editar</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    style={{ background: "transparent", borderColor: "#3A2430", color: "#F87171" }}
+                    aria-label={deletingId === checklist.id ? "Excluindo..." : "Excluir checklist"}
+                    title={deletingId === checklist.id ? "Excluindo..." : "Excluir checklist"}
+                    disabled={deletingId === checklist.id}
+                    onClick={() => deleteChecklist(checklist.id)}
+                  >
+                    <Trash2 />
+                    <span className="btn-label-desktop">
+                      {deletingId === checklist.id ? "Excluindo..." : "Excluir"}
                     </span>
                   </Button>
                 </div>
