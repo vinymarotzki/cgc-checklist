@@ -6,7 +6,7 @@ import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
 import { STATUS_LABELS, getStatusColor, getStatusPillStyle } from "@/lib/checklist-status";
 import {
-  Lock, Search, ArrowLeft, History, MessageSquare, Pencil, Trash2, RefreshCw,
+  Lock, ArrowLeft, History, MessageSquare, Pencil, Trash2, RefreshCw,
   FileText, ChevronDown, ChevronUp, type LucideIcon,
 } from "lucide-react";
 
@@ -28,6 +28,7 @@ interface GroupSummary {
   id: string;
   name: string;
   concluded: number;
+  total: number;
 }
 
 interface User {
@@ -139,7 +140,6 @@ function CgcHistoryPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   // Cada atividade é um dropdown fechado por padrão; abrir revela tudo que
   // aconteceu com ela (status alterado, comentário criado/editado/apagado).
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
@@ -174,26 +174,16 @@ function CgcHistoryPage() {
     fetchHistory();
   }, [fetchHistory]);
 
-  const term = searchTerm.trim().toLowerCase();
-  const filtered = useMemo(
-    () =>
-      term
-        ? history.filter((entry) =>
-            [entry.description, entry.group_name, entry.user_name, entry.observation]
-              .some((value) => value?.toLowerCase().includes(term))
-          )
-        : history,
-    [history, term]
+  const activityGroups = useMemo(() => groupByActivity(history), [history]);
+
+  const inProgressCount = useMemo(
+    () => activityGroups.filter((group) => group.currentStatus === "EM_ANDAMENTO").length,
+    [activityGroups]
   );
-
-  const activityGroups = useMemo(() => groupByActivity(filtered), [filtered]);
-
-  // Durante uma busca não faz sentido obrigar o usuário a abrir grupo por grupo
-  // para ver o que casou com o termo.
-  useEffect(() => {
-    if (!term) return;
-    setOpenGroups(new Set(activityGroups.map((group) => group.messageId)));
-  }, [term, activityGroups]);
+  const blockedCount = useMemo(
+    () => activityGroups.filter((group) => group.currentStatus === "IMPEDIDO").length,
+    [activityGroups]
+  );
 
   const toggleGroup = (messageId: string) => {
     setOpenGroups((previous) => {
@@ -231,13 +221,15 @@ function CgcHistoryPage() {
 
   return (
     <div className="page-shell">
-      <header className="app-header">
-        <div className="app-header-inner">
-          <div className="app-nav">
-            <Link href={backHref} className="history-back-link"><ArrowLeft size={14} /> Atividades do CGC</Link>
-            <span className="history-page-title"><History size={15} /> Histórico do CGC</span>
+      <header className="history-header">
+        <div className="history-header-inner">
+          <div className="history-header-left">
+            <Link href={backHref} className="history-back-link"><ArrowLeft size={14} /> Atividades da CGC</Link>
           </div>
-          <span className="history-user-badge">{user.name}</span>
+          <div className="history-header-main">
+            <span className="history-page-title"><History size={15} /> Histórico das Atividades</span>
+            <span className="history-user-badge">{user.name}</span>
+          </div>
         </div>
       </header>
 
@@ -248,14 +240,16 @@ function CgcHistoryPage() {
             <div className="history-stat-label">Atividades concluídas</div>
           </div>
           <div className="history-stat-card">
-            <div className="history-stat-value">{history.length}</div>
-            <div className="history-stat-label">Alterações registradas</div>
+            <div className="history-stat-value" style={{ color: getStatusColor("EM_ANDAMENTO") }}>
+              {inProgressCount}
+            </div>
+            <div className="history-stat-label">Atividades em andamento</div>
           </div>
           <div className="history-stat-card">
-            <div className="history-stat-value">
-              {new Set(history.map((entry) => entry.user_name).filter(Boolean)).size}
+            <div className="history-stat-value" style={{ color: getStatusColor("IMPEDIDO") }}>
+              {blockedCount}
             </div>
-            <div className="history-stat-label">Responsáveis únicos</div>
+            <div className="history-stat-label">Atividades paradas</div>
           </div>
         </div>
 
@@ -269,17 +263,26 @@ function CgcHistoryPage() {
             </div>
           ) : (
             <div className="history-completions-list">
-              {groups.map((group) => (
-                <div key={group.id} className="history-completion-card">
-                  <div>
-                    <div className="history-completion-user">{group.name}</div>
-                    <div className="history-completion-meta">
-                      {group.concluded === 1 ? "1 atividade concluída" : `${group.concluded} atividades concluídas`}
+              {groups.map((group) => {
+                const pct = group.total > 0 ? Math.round((group.concluded / group.total) * 100) : 0;
+                return (
+                  <div key={group.id} className="history-completion-card">
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div className="history-completion-user">{group.name}</div>
+                      <div className="history-completion-meta">
+                        {group.concluded === 1 ? "1 atividade concluída" : `${group.concluded} atividades concluídas`}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                        <div style={{ height: 6, background: "#1E2333", borderRadius: 999, overflow: "hidden", width: 120, maxWidth: "100%" }}>
+                          <div style={{ width: `${pct}%`, height: "100%", background: "#34D399", borderRadius: 999, transition: "width 0.4s ease" }} />
+                        </div>
+                        <span style={{ color: "#E8EAF0", fontSize: 11, fontWeight: 700 }}>{pct}%</span>
+                      </div>
                     </div>
+                    <div className="history-completion-count">{group.concluded}</div>
                   </div>
-                  <div className="history-completion-count">{group.concluded}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -289,24 +292,9 @@ function CgcHistoryPage() {
             <h2 style={{ color: "#E8EAF0", fontSize: 16, margin: 0 }}>Alterações por atividade</h2>
           </div>
 
-          <div className="history-search">
-            <input
-              className="history-search-input"
-              type="text"
-              placeholder="Buscar por atividade, grupo, usuário ou comentário..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Search size={14} className="search-icon" />
-          </div>
-
           {activityGroups.length === 0 ? (
             <div className="history-empty-state">
-              <p>
-                {history.length === 0
-                  ? "Nenhuma alteração registrada ainda."
-                  : "Nenhum resultado encontrado."}
-              </p>
+              <p>Nenhuma alteração registrada ainda.</p>
             </div>
           ) : (
             <>
@@ -314,7 +302,7 @@ function CgcHistoryPage() {
                 <span className="history-groups-summary">
                   {activityGroups.length === 1 ? "1 atividade" : `${activityGroups.length} atividades`}
                   {" · "}
-                  {filtered.length === 1 ? "1 alteração" : `${filtered.length} alterações`}
+                  {history.length === 1 ? "1 alteração" : `${history.length} alterações`}
                 </span>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button

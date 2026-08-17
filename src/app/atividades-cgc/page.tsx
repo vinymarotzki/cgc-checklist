@@ -490,7 +490,7 @@ function AtividadesCgcPage() {
             </Link>
           )}
           <span style={{ color: "#E8EAF0", fontSize: 15, fontWeight: 600 }}>
-            {groupId ? (group?.name || "Atividades do CGC") : "Atividades do CGC"}
+            {groupId ? (group?.name || "Atividades da CGC") : "Atividades da CGC"}
           </span>
         </div>
         <div className="app-nav">

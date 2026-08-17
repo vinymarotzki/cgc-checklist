@@ -7,17 +7,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
 import { listHistory } from "@/lib/cgc/history";
 import { listGroups } from "@/lib/cgc/groups";
-import { getConcludedCountByGroup } from "@/lib/cgc/status-store";
+import { getGroupCounts } from "@/lib/cgc/status-store";
+import { getLiveGroupTotals } from "@/lib/cgc/group-totals";
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req);
   if (auth.error) return auth.error;
 
   try {
-    const [history, groups, concluded] = await Promise.all([
-      listHistory(),
-      listGroups(),
-      getConcludedCountByGroup(),
+    const [history, groups] = await Promise.all([listHistory(), listGroups()]);
+    // Mesma lógica de /api/cgc/groups: total "solicitado" ao vivo (cacheado),
+    // com fallback pro total local se a API SASI falhar.
+    const [counts, liveTotals] = await Promise.all([
+      getGroupCounts().catch(() => ({} as Record<string, { total: number; concluded: number }>)),
+      getLiveGroupTotals(groups, auth.token).catch(() => ({} as Record<string, number>)),
     ]);
 
     return NextResponse.json({
@@ -25,7 +28,8 @@ export async function GET(req: NextRequest) {
       groups: groups.map((group) => ({
         id: group.id,
         name: group.name,
-        concluded: concluded[group.id] ?? 0,
+        concluded: counts[group.id]?.concluded ?? 0,
+        total: liveTotals[group.id] ?? counts[group.id]?.total ?? 0,
       })),
       user: auth.user,
     });
