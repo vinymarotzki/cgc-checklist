@@ -52,7 +52,7 @@ export async function notifySubscription(key: string, payload: NotifyPayload): P
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        "Content-Type": "application/json; charset=utf-8",
         Accept: "application/json",
       },
       body: JSON.stringify(payload),
