@@ -569,7 +569,14 @@ function AtividadesCgcPage() {
                     }}
                   >
                     <div style={{ minWidth: 0 }}>
-                      <h2 style={{ margin: 0, fontSize: 14, color }}>{item.name}</h2>
+                      <h2 style={{ margin: 0 }}>
+                        <span style={{
+                          display: "inline-block", background: color, color: "#FFFFFF",
+                          fontSize: 13, fontWeight: 800, padding: "4px 12px", borderRadius: 6
+                        }}>
+                          {item.name}
+                        </span>
+                      </h2>
                       {!configured ? (
                         <p style={{ margin: "6px 0 0", color: "#F59E0B", fontSize: 12 }}>
                           Grupo ainda não configurado
