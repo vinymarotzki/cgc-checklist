@@ -222,6 +222,11 @@ function ChecklistsPage() {
     setSelectedObservationColumn(null);
     if (!file) return;
 
+    if (!/\.(csv|xlsx)$/i.test(file.name)) {
+      setParseError("Formato não suportado. Envie um arquivo .csv ou .xlsx.");
+      return;
+    }
+
     try {
       let rows: unknown[][] = [];
       const buffer = await file.arrayBuffer();
@@ -601,7 +606,7 @@ function ChecklistsPage() {
                     </strong>
                     <p style={{ margin: "4px 0 0", color: "#E8EAF0", fontSize: 13 }}>Selecione quais colunas devem ser importadas. Use &quot;Não importar&quot; para ignorar colunas opcionais.</p>
                   </div>
-                  <input type="file" accept="*/*" onChange={(e) => handleFile(e.target.files?.[0] || null)} style={{ color: "#E8EAF0", fontSize: 13 }} />
+                  <input type="file" accept=".csv,.xlsx" onChange={(e) => handleFile(e.target.files?.[0] || null)} style={{ color: "#E8EAF0", fontSize: 13 }} />
                 </div>
 
                 {parseError && <p style={{ color: "#F87171", fontSize: 13, margin: "12px 0 0" }}>{parseError}</p>}
