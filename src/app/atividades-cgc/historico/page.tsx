@@ -295,7 +295,6 @@ function CgcHistoryPage() {
                         <span style={{ color: "#E8EAF0", fontSize: 11, fontWeight: 700 }}>{pct}%</span>
                       </div>
                     </div>
-                    <div className="history-completion-count">{group.concluded}</div>
                   </div>
                 );
               })}
