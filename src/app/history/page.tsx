@@ -7,8 +7,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { STATUS_LABELS, getStatusColor, getStatusPillStyle } from "@/lib/checklist-status";
 import {
-  Lock, Search, ArrowLeft, MessageSquare, Pencil, Trash2, RefreshCw, FileText,
-  ChevronDown, ChevronUp, type LucideIcon,
+  Lock, Search, ArrowLeft, History, MessageSquare, Pencil, Trash2, RefreshCw, FileText,
+  ChevronDown, ChevronUp, User, type LucideIcon,
 } from "lucide-react";
 
 interface HistoryEntry {
@@ -183,7 +183,7 @@ function HistoryPage() {
             animation: "spin 0.8s linear infinite", margin: "0 auto 16px"
           }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ color: "#7A82A0", fontSize: 14 }}>Carregando histórico...</p>
+          <p style={{ color: "#E8EAF0", fontSize: 14 }}>Carregando histórico...</p>
         </div>
       </div>
     );
@@ -198,7 +198,7 @@ function HistoryPage() {
         }}>
           <Lock size={36} color="#F87171" style={{ marginBottom: 16 }} />
           <h2 style={{ color: "#F87171", fontSize: 20, fontWeight: 600 }}>Acesso negado</h2>
-          <p style={{ color: "#7A82A0", fontSize: 14 }}>Token inválido ou não informado.</p>
+          <p style={{ color: "#E8EAF0", fontSize: 14 }}>Token inválido ou não informado.</p>
         </div>
       </div>
     );
@@ -207,33 +207,43 @@ function HistoryPage() {
   return (
     <div className="page-shell">
       <header className="history-header">
-        <div className="history-header-inner">
-          <div className="history-header-left">
+        <div className="history-header-inner" style={{ flexDirection: "row", flexWrap: "nowrap" }}>
+          <div className="history-header-left" style={{ width: "auto", flex: "0 0 auto" }}>
             <Link
               href="/"
               className="history-back-link"
+              style={{ whiteSpace: "nowrap" }}
             >
               <ArrowLeft size={14} /> Checklist
             </Link>
           </div>
-          <div className="history-header-main">
-            <span className="history-page-title">Histórico de Alterações</span>
-            <span className="history-user-badge">
-              <span>{user.name.charAt(0).toUpperCase()}</span>
-              <span>{user.name}</span>
+          <div className="history-header-main" style={{ flexWrap: "nowrap", width: "auto", minWidth: 0 }}>
+            <span className="history-page-title" style={{ width: "auto", whiteSpace: "nowrap" }}>
+              <History size={15} /> Histórico
             </span>
+            <div className="history-user-badge" style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "6px 10px", background: "#1E2333",
+              borderRadius: 6, border: "1px solid #2A3045",
+              width: "auto", flexShrink: 0
+            }}>
+              <User size={14} color="#E8EAF0" />
+              <span style={{ color: "#E8EAF0", fontSize: 13, whiteSpace: "nowrap" }}>
+                {user.name.split(" ")[0]}
+              </span>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="page-container">
-        <div className="history-stats-grid">
-          <div className="history-stat-card">
-            <div className="history-stat-value">{history.length}</div>
+        <div className="history-stats-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div className="history-stat-card" style={{ padding: "8px 12px" }}>
+            <div className="history-stat-value" style={{ fontSize: 18 }}>{history.length}</div>
             <div className="history-stat-label">Total de alterações</div>
           </div>
-          <div className="history-stat-card">
-            <div className="history-stat-value">
+          <div className="history-stat-card" style={{ padding: "8px 12px" }}>
+            <div className="history-stat-value" style={{ fontSize: 18 }}>
               {history.filter((h) => h.new_status === "CONCLUIDO").length}
             </div>
             <div className="history-stat-label">Marcadas concluídas</div>
@@ -354,7 +364,7 @@ function HistoryPage() {
                                     <span className="history-status-pill" style={getStatusPillStyle(entry.old_status)}>
                                       {STATUS_LABELS[entry.old_status] || entry.old_status || "—"}
                                     </span>
-                                    <span style={{ color: "#7A82A0", fontSize: 14 }}>→</span>
+                                    <span style={{ color: "#E8EAF0", fontSize: 14 }}>→</span>
                                     <span className="history-status-pill" style={getStatusPillStyle(entry.new_status)}>
                                       {STATUS_LABELS[entry.new_status] || entry.new_status || "—"}
                                     </span>
