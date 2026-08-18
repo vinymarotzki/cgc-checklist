@@ -503,8 +503,8 @@ function AtividadesCgcPage() {
 
   const header = (
     <header className="app-header">
-      <div className="app-header-inner" style={{ flexDirection: "row", flexWrap: "nowrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: "0 0 auto" }}>
+      <div className="app-header-inner">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           {groupId && (
             <Link
               href="/atividades-cgc"
@@ -521,7 +521,7 @@ function AtividadesCgcPage() {
             {groupId ? (group?.name || "Atividades da CGC") : "Atividades da CGC"}
           </span>
         </div>
-        <div className="app-nav" style={{ flexWrap: "nowrap", width: "auto" }}>
+        <div className="app-nav">
           <Link
             href="/atividades-cgc/historico"
             style={{
