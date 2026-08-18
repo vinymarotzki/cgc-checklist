@@ -228,7 +228,20 @@ function CgcHistoryPage() {
           </div>
           <div className="history-header-main">
             <span className="history-page-title"><History size={15} /> Histórico das Atividades</span>
-            <span className="history-user-badge">{user.name}</span>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "6px 12px", background: "#1E2333",
+              borderRadius: 6, border: "1px solid #2A3045"
+            }}>
+              <div style={{
+                width: 24, height: 24, background: "#3B6EF5",
+                borderRadius: "50%", display: "flex", alignItems: "center",
+                justifyContent: "center", fontSize: 11, fontWeight: 700, color: "white"
+              }}>
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+              <span style={{ color: "#E8EAF0", fontSize: 13 }}>{user.name}</span>
+            </div>
           </div>
         </div>
       </header>
