@@ -237,13 +237,13 @@ function HistoryPage() {
       </header>
 
       <main className="page-container">
-        <div className="history-stats-grid">
-          <div className="history-stat-card">
-            <div className="history-stat-value">{history.length}</div>
+        <div className="history-stats-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div className="history-stat-card" style={{ padding: "8px 12px" }}>
+            <div className="history-stat-value" style={{ fontSize: 18 }}>{history.length}</div>
             <div className="history-stat-label">Total de alterações</div>
           </div>
-          <div className="history-stat-card">
-            <div className="history-stat-value">
+          <div className="history-stat-card" style={{ padding: "8px 12px" }}>
+            <div className="history-stat-value" style={{ fontSize: 18 }}>
               {history.filter((h) => h.new_status === "CONCLUIDO").length}
             </div>
             <div className="history-stat-label">Marcadas concluídas</div>
