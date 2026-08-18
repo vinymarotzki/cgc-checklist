@@ -18,7 +18,6 @@ import type {
   CgcActivitiesResponse,
   CgcActivity,
   CgcGroup,
-  CgcPriorityLevel,
 } from "@/lib/cgc/types";
 
 interface User {
@@ -68,17 +67,6 @@ function formatClock(date: Date | null) {
   return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
-function getPriorityStyle(level: CgcPriorityLevel) {
-  const map: Record<CgcPriorityLevel, { bg: string; color: string; border: string }> = {
-    ALTA: { bg: "#2A1A1A", color: "#F87171", border: "#DC2626" },
-    MEDIA: { bg: "#2A2410", color: "#FBBF24", border: "#B45309" },
-    BAIXA: { bg: "#0F2A1E", color: "#34D399", border: "#059669" },
-    OUTRA: { bg: "#1A2E4A", color: "#60A5FA", border: "#2563EB" },
-    SEM_PRIORIDADE: { bg: "#1E2333", color: "#7A82A0", border: "#2A3045" },
-  };
-  return map[level] ?? map.SEM_PRIORIDADE;
-}
-
 function formatDate(value: string | null) {
   if (!value) return null;
   const date = new Date(value);
@@ -126,7 +114,6 @@ function activitySnapshot(activity: CgcActivity | undefined, groupId: string) {
     group_id: groupId,
     group_name: activity.group,
     description: activity.description,
-    priority: activity.priority.label,
     deadline: activity.deadline?.label ?? null,
   };
 }
@@ -777,7 +764,6 @@ function AtividadesCgcPage() {
                   {items.map((activity) => {
                     const st = getStatusStyle(activity.status);
                     const isSavingThis = savingStatusId === activity.id;
-                    const priority = getPriorityStyle(activity.priority.level);
                     const deadlineLabel = activity.deadline
                       ? formatDate(activity.deadline.iso) || activity.deadline.label
                       : null;
@@ -859,12 +845,6 @@ function AtividadesCgcPage() {
                               </div>
                             ))}
                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
-                              <span style={{
-                                fontSize: 11, fontWeight: 600, borderRadius: 4, padding: "2px 8px",
-                                background: priority.bg, color: priority.color, border: `1px solid ${priority.border}`
-                              }}>
-                                {activity.priority.label}
-                              </span>
                               <span style={{
                                 fontSize: 11, borderRadius: 4, padding: "2px 8px",
                                 background: overdue ? "#2A1A1A" : "#1E2333",
