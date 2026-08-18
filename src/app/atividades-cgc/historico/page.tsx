@@ -224,7 +224,7 @@ function CgcHistoryPage() {
       <header className="history-header">
         <div className="history-header-inner">
           <div className="history-header-left">
-            <Link href={backHref} className="history-back-link"><ArrowLeft size={14} /> Atividades da CGC</Link>
+            <Link href={backHref} className="history-back-link"><ArrowLeft size={14} /> Voltar</Link>
           </div>
           <div className="history-header-main">
             <span className="history-page-title"><History size={15} /> Histórico das Atividades</span>
