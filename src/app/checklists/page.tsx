@@ -408,11 +408,11 @@ function ChecklistsPage() {
   return (
     <div style={{ background: "#0F1117", minHeight: "100vh", color: "#E8EAF0" }}>
       <header className="app-header">
-        <div className="app-header-inner" style={{ flexDirection: "row", flexWrap: "nowrap" }}>
+        <div className="app-header-inner">
           <div style={{ flex: "0 0 auto" }}>
             <h1 style={{ margin: 0, fontSize: 20, whiteSpace: "nowrap" }}>Checklists</h1>
           </div>
-          <div className="app-nav" style={{ flexWrap: "nowrap", width: "auto" }}>
+          <div className="app-nav">
             <Link href={listHref} style={{ color: "#7A82A0", fontSize: 13, textDecoration: "none", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
               <RefreshCw size={14} /> Atualizar
             </Link>

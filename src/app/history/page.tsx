@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { STATUS_LABELS, getStatusColor, getStatusPillStyle } from "@/lib/checklist-status";
 import {
-  Lock, Search, ArrowLeft, MessageSquare, Pencil, Trash2, RefreshCw, FileText,
+  Lock, Search, ArrowLeft, History, MessageSquare, Pencil, Trash2, RefreshCw, FileText,
   ChevronDown, ChevronUp, User, type LucideIcon,
 } from "lucide-react";
 
@@ -218,7 +218,9 @@ function HistoryPage() {
             </Link>
           </div>
           <div className="history-header-main" style={{ flexWrap: "nowrap", width: "auto", minWidth: 0 }}>
-            <span className="history-page-title" style={{ width: "auto", whiteSpace: "nowrap" }}>Histórico</span>
+            <span className="history-page-title" style={{ width: "auto", whiteSpace: "nowrap" }}>
+              <History size={15} /> Histórico
+            </span>
             <div className="history-user-badge" style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 10px", background: "#1E2333",
