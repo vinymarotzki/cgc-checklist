@@ -8,7 +8,7 @@ import { Suspense } from "react";
 import { STATUS_LABELS, getStatusColor, getStatusPillStyle } from "@/lib/checklist-status";
 import {
   Lock, Search, ArrowLeft, MessageSquare, Pencil, Trash2, RefreshCw, FileText,
-  ChevronDown, ChevronUp, type LucideIcon,
+  ChevronDown, ChevronUp, User, type LucideIcon,
 } from "lucide-react";
 
 interface HistoryEntry {
@@ -207,21 +207,29 @@ function HistoryPage() {
   return (
     <div className="page-shell">
       <header className="history-header">
-        <div className="history-header-inner">
-          <div className="history-header-left">
+        <div className="history-header-inner" style={{ flexDirection: "row", flexWrap: "nowrap" }}>
+          <div className="history-header-left" style={{ width: "auto", flex: "0 0 auto" }}>
             <Link
               href="/"
               className="history-back-link"
+              style={{ whiteSpace: "nowrap" }}
             >
               <ArrowLeft size={14} /> Checklist
             </Link>
           </div>
-          <div className="history-header-main">
-            <span className="history-page-title">Histórico de Alterações</span>
-            <span className="history-user-badge">
-              <span>{user.name.charAt(0).toUpperCase()}</span>
-              <span>{user.name}</span>
-            </span>
+          <div className="history-header-main" style={{ flexWrap: "nowrap", width: "auto", minWidth: 0 }}>
+            <span className="history-page-title" style={{ width: "auto", whiteSpace: "nowrap" }}>Histórico</span>
+            <div className="history-user-badge" style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "6px 10px", background: "#1E2333",
+              borderRadius: 6, border: "1px solid #2A3045",
+              width: "auto", flexShrink: 0
+            }}>
+              <User size={14} color="#7A82A0" />
+              <span style={{ color: "#E8EAF0", fontSize: 13, whiteSpace: "nowrap" }}>
+                {user.name.split(" ")[0]}
+              </span>
+            </div>
           </div>
         </div>
       </header>

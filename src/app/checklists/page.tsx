@@ -6,7 +6,7 @@ import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
 import { getStatusColor } from "@/lib/checklist-status";
 import * as XLSX from "xlsx";
-import { Lock, RefreshCw, Plus, ExternalLink, Pencil, Trash2, Upload, MenuIcon, XIcon } from "lucide-react";
+import { Lock, RefreshCw, Plus, ExternalLink, Pencil, Trash2, Upload, MenuIcon, XIcon, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -408,22 +408,27 @@ function ChecklistsPage() {
   return (
     <div style={{ background: "#0F1117", minHeight: "100vh", color: "#E8EAF0" }}>
       <header className="app-header">
-        <div className="app-header-inner">
-          <div>
-            <h1 style={{ margin: 0, fontSize: 20 }}>Checklists</h1>
-            <p style={{ margin: "4px 0 0", color: "#7A82A0", fontSize: 13 }}>Selecione ou importe uma planilha de atividades</p>
+        <div className="app-header-inner" style={{ flexDirection: "row", flexWrap: "nowrap" }}>
+          <div style={{ flex: "0 0 auto" }}>
+            <h1 style={{ margin: 0, fontSize: 20, whiteSpace: "nowrap" }}>Checklists</h1>
           </div>
-          <div className="app-nav">
-            <Link href={listHref} style={{ color: "#7A82A0", fontSize: 13, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
+          <div className="app-nav" style={{ flexWrap: "nowrap", width: "auto" }}>
+            <Link href={listHref} style={{ color: "#7A82A0", fontSize: 13, textDecoration: "none", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
               <RefreshCw size={14} /> Atualizar
             </Link>
             <button
               onClick={openCreateModal}
-              style={{ background: "#3B6EF5", color: "white", border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+              style={{ background: "#3B6EF5", color: "white", border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}
             >
               <Plus size={16} /> <span className="btn-label-desktop">Checklist</span>
             </button>
-            <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>{user.name}</span>
+            <span style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "#1E2333", border: "1px solid #2A3045", borderRadius: 8,
+              padding: "6px 10px", fontSize: 13, whiteSpace: "nowrap", flexShrink: 0
+            }}>
+              <User size={14} color="#7A82A0" /> {user.name.split(" ")[0]}
+            </span>
           </div>
         </div>
       </header>
