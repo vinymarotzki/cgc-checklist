@@ -228,7 +228,7 @@ function CgcHistoryPage() {
           </div>
           <div className="history-header-main">
             <span className="history-page-title"><History size={15} /> Histórico das Atividades</span>
-            <div style={{
+            <div className="history-user-badge" style={{
               display: "flex", alignItems: "center", gap: 8,
               padding: "6px 12px", background: "#1E2333",
               borderRadius: 6, border: "1px solid #2A3045"
