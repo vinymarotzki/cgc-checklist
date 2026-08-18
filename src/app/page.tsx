@@ -6,7 +6,7 @@ import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
 import Link from "next/link";
 import { Suspense } from "react";
-import { History, ClipboardList, Search, MessageSquare, Pencil, X, Lock, Settings } from "lucide-react";
+import { History, ClipboardList, Search, MessageSquare, Pencil, X, Lock, Settings, User } from "lucide-react";
 import {
   STATUS_OPTIONS,
   getCategoryColor,
@@ -303,7 +303,7 @@ function ChecklistPage() {
               href="/history"
               style={{
                 color: "#7A82A0", fontSize: 13, textDecoration: "none",
-                display: "flex", alignItems: "center", gap: 6,
+                display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
                 padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
                 transition: "all 0.15s"
               }}
@@ -314,7 +314,7 @@ function ChecklistPage() {
               href="/checklists"
               style={{
                 color: "#7A82A0", fontSize: 13, textDecoration: "none",
-                display: "flex", alignItems: "center", gap: 6,
+                display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
                 padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
                 transition: "all 0.15s"
               }}
@@ -325,7 +325,7 @@ function ChecklistPage() {
               href={`/admin?checklist=${encodeURIComponent(checklistId)}`}
               style={{
                 color: "#7A82A0", fontSize: 13, textDecoration: "none",
-                display: "flex", alignItems: "center", gap: 6,
+                display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
                 padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
                 transition: "all 0.15s"
               }}
@@ -333,18 +333,14 @@ function ChecklistPage() {
               <Settings size={14} /> Editar conteúdo
             </Link>
             <div style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "6px 12px", background: "#1E2333",
-              borderRadius: 6, border: "1px solid #2A3045"
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "6px 10px", background: "#1E2333",
+              borderRadius: 6, border: "1px solid #2A3045", flexShrink: 0
             }}>
-              <div style={{
-                width: 24, height: 24, background: "#3B6EF5",
-                borderRadius: "50%", display: "flex", alignItems: "center",
-                justifyContent: "center", fontSize: 11, fontWeight: 700, color: "white"
-              }}>
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-              <span style={{ color: "#E8EAF0", fontSize: 13 }}>{user.name}</span>
+              <User size={14} color="#7A82A0" />
+              <span style={{ color: "#E8EAF0", fontSize: 13, whiteSpace: "nowrap" }}>
+                {user.name.split(" ")[0]}
+              </span>
             </div>
           </div>
         </div>
