@@ -236,8 +236,10 @@ function CgcHistoryPage() {
       <main className="page-container">
         <div className="history-stats-grid">
           <div className="history-stat-card">
-            <div className="history-stat-value">{totalConcluded}</div>
-            <div className="history-stat-label">Atividades concluídas</div>
+            <div className="history-stat-value" style={{ color: getStatusColor("IMPEDIDO") }}>
+              {blockedCount}
+            </div>
+            <div className="history-stat-label">Atividades paradas</div>
           </div>
           <div className="history-stat-card">
             <div className="history-stat-value" style={{ color: getStatusColor("EM_ANDAMENTO") }}>
@@ -246,10 +248,10 @@ function CgcHistoryPage() {
             <div className="history-stat-label">Atividades em andamento</div>
           </div>
           <div className="history-stat-card">
-            <div className="history-stat-value" style={{ color: getStatusColor("IMPEDIDO") }}>
-              {blockedCount}
+            <div className="history-stat-value" style={{ color: getStatusColor("CONCLUIDO") }}>
+              {totalConcluded}
             </div>
-            <div className="history-stat-label">Atividades paradas</div>
+            <div className="history-stat-label">Atividades concluídas</div>
           </div>
         </div>
 
