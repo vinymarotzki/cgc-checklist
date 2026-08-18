@@ -8,7 +8,7 @@ import { useSasiToken } from "@/hooks/useSasiToken";
 import { getCgcGroupColor } from "@/lib/cgc/colors";
 import {
   ArrowLeft, ChevronUp, ChevronDown, Pencil, X, MessageSquare,
-  History, Search, Lock, RefreshCw, ExternalLink,
+  History, Search, Lock, RefreshCw, ExternalLink, User,
 } from "lucide-react";
 import {
   STATUS_OPTIONS,
@@ -475,48 +475,44 @@ function AtividadesCgcPage() {
 
   const header = (
     <header className="app-header">
-      <div className="app-header-inner">
-        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+      <div className="app-header-inner" style={{ flexDirection: "row", flexWrap: "nowrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: "0 0 auto" }}>
           {groupId && (
             <Link
               href="/atividades-cgc"
               style={{
                 color: "#7A82A0", fontSize: 13, textDecoration: "none",
                 padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
-                display: "flex", alignItems: "center", gap: 6
+                display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap"
               }}
             >
               <ArrowLeft size={14} /> Grupos
             </Link>
           )}
-          <span style={{ color: "#E8EAF0", fontSize: 15, fontWeight: 600 }}>
+          <span style={{ color: "#E8EAF0", fontSize: 15, fontWeight: 600, whiteSpace: "nowrap" }}>
             {groupId ? (group?.name || "Atividades da CGC") : "Atividades da CGC"}
           </span>
         </div>
-        <div className="app-nav">
+        <div className="app-nav" style={{ flexWrap: "nowrap", width: "auto" }}>
           <Link
             href="/atividades-cgc/historico"
             style={{
               color: "#7A82A0", fontSize: 13, textDecoration: "none",
               padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
-              display: "flex", alignItems: "center", gap: 6
+              display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap"
             }}
           >
             <History size={14} /> Histórico
           </Link>
           <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "6px 12px", background: "#1E2333",
-            borderRadius: 6, border: "1px solid #2A3045"
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "6px 10px", background: "#1E2333",
+            borderRadius: 6, border: "1px solid #2A3045", flexShrink: 0
           }}>
-            <div style={{
-              width: 24, height: 24, background: "#3B6EF5",
-              borderRadius: "50%", display: "flex", alignItems: "center",
-              justifyContent: "center", fontSize: 11, fontWeight: 700, color: "white"
-            }}>
-              {user.name.charAt(0).toUpperCase()}
-            </div>
-            <span style={{ color: "#E8EAF0", fontSize: 13 }}>{user.name}</span>
+            <User size={14} color="#7A82A0" />
+            <span style={{ color: "#E8EAF0", fontSize: 13, whiteSpace: "nowrap" }}>
+              {user.name.split(" ")[0]}
+            </span>
           </div>
         </div>
       </div>
