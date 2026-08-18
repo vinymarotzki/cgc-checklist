@@ -252,8 +252,8 @@ export default function ControlePage() {
   return (
     <div className="page-shell">
       <header className="app-header">
-        <div className="app-header-inner">
-          <div>
+        <div className="app-header-inner" style={{ flexDirection: "row", flexWrap: "nowrap" }}>
+          <div style={{ minWidth: 0 }}>
             <h1 style={{ margin: 0, fontSize: 20 }}>Controle</h1>
             <p style={{ margin: "4px 0 0", color: "#7A82A0", fontSize: 13 }}>
               Resumo de checklists e atividades do CGC finalizados

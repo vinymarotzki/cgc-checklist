@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { sasiAuthHeaders } from '@/lib/token';
 import { useSasiToken } from '@/hooks/useSasiToken';
-import { Lock, ArrowLeft, History, Plus, Trash2 } from 'lucide-react';
+import { Lock, ArrowLeft, History, Plus, Trash2, User } from 'lucide-react';
 
 interface Activity {
   id: string;
@@ -292,18 +292,22 @@ function AdminPageContent() {
   return (
     <div style={{ minHeight: '100vh', background: '#0F1117', color: '#E8EAF0' }}>
       <header className="app-header">
-        <div className="app-header-inner">
-          <div className="app-nav">
-            <Link href={checklistHref} style={{ color: '#7A82A0', textDecoration: 'none', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className="app-header-inner" style={{ flexDirection: 'row', flexWrap: 'nowrap' }}>
+          <div className="app-nav" style={{ flexWrap: 'nowrap', width: 'auto' }}>
+            <Link href={checklistHref} style={{ color: '#7A82A0', textDecoration: 'none', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
               <ArrowLeft size={14} /> Checklist
             </Link>
-            <Link href={historyHref} style={{ color: '#7A82A0', textDecoration: 'none', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Link href={historyHref} style={{ color: '#7A82A0', textDecoration: 'none', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
               <History size={14} /> Histórico
             </Link>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ padding: '6px 10px', borderRadius: 999, background: '#1E2333', border: '1px solid #2A3045', color: '#E8EAF0', fontSize: 13 }}>
-              {user.name}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 10px', borderRadius: 6, background: '#1E2333',
+              border: '1px solid #2A3045', color: '#E8EAF0', fontSize: 13, whiteSpace: 'nowrap'
+            }}>
+              <User size={14} color="#7A82A0" /> {user.name.split(' ')[0]}
             </div>
           </div>
         </div>
