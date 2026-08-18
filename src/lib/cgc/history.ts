@@ -15,7 +15,6 @@ export interface CgcHistoryEntry {
   group_id: string | null;
   group_name: string | null;
   description: string | null;
-  priority: string | null;
   deadline: string | null;
   old_status: string | null;
   new_status: string | null;
@@ -30,7 +29,6 @@ export interface CgcActivitySnapshot {
   group_id?: string | null;
   group_name?: string | null;
   description?: string | null;
-  priority?: string | null;
   deadline?: string | null;
 }
 
@@ -59,7 +57,7 @@ function nullable(value: unknown): string | null {
 async function getLatestSnapshot(messageId: string): Promise<CgcActivitySnapshot | null> {
   const db = getDb();
   const result = await db.execute({
-    sql: `SELECT group_id, group_name, description, priority, deadline
+    sql: `SELECT group_id, group_name, description, deadline
             FROM cgc_history
            WHERE message_id = ? AND description IS NOT NULL
            ORDER BY created_at DESC
@@ -87,22 +85,20 @@ export async function recordHistory(input: RecordHistoryInput): Promise<void> {
       group_id: nullable(input.group_id) ?? nullable(previous?.group_id),
       group_name: nullable(input.group_name) ?? nullable(previous?.group_name),
       description: nullable(input.description) ?? nullable(previous?.description),
-      priority: nullable(input.priority) ?? nullable(previous?.priority),
       deadline: nullable(input.deadline) ?? nullable(previous?.deadline),
     };
 
     await db.execute({
       sql: `INSERT INTO cgc_history
-              (id, message_id, group_id, group_name, description, priority, deadline,
+              (id, message_id, group_id, group_name, description, deadline,
                old_status, new_status, observation, user_id, user_name, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         uuidv4(),
         input.message_id,
         snapshot.group_id ?? null,
         snapshot.group_name ?? null,
         snapshot.description ?? null,
-        snapshot.priority ?? null,
         snapshot.deadline ?? null,
         nullable(input.old_status),
         nullable(input.new_status),
@@ -123,7 +119,6 @@ export function readSnapshot(source: Record<string, unknown>): CgcActivitySnapsh
     group_id: nullable(source.group_id),
     group_name: nullable(source.group_name),
     description: nullable(source.description),
-    priority: nullable(source.priority),
     deadline: nullable(source.deadline),
   };
 }

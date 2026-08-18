@@ -39,7 +39,6 @@ interface CgcGroupSummary {
 interface CgcConcludedActivity {
   id: string;
   description: string;
-  priority: string;
   deadline: string | null;
   comments: string;
   responsible: string;
@@ -123,11 +122,11 @@ function exportChecklistXlsx(checklist: CompletedChecklist, items: CompletedChec
 }
 
 function exportCgcXlsx(groupName: string, activities: CgcConcludedActivity[]) {
-  const headerRow = ["Grupo", "Descrição", "Prioridade", "Prazo", "Status", "Comentários", "Responsável", "Data da Conclusão"];
+  const headerRow = ["Grupo", "Descrição", "Prazo", "Status", "Comentários", "Responsável", "Data da Conclusão"];
   const rows: unknown[][] = [headerRow];
   activities.forEach((activity) => {
     rows.push([
-      groupName, activity.description, activity.priority, activity.deadline || "",
+      groupName, activity.description, activity.deadline || "",
       "CONCLUÍDO", activity.comments, activity.responsible, activity.updatedAt,
     ]);
   });
@@ -243,7 +242,7 @@ export default function ControlePage() {
 
   if (loading) {
     return (
-      <div style={{ background: "#0F1117", minHeight: "100vh", display: "grid", placeItems: "center", color: "#7A82A0" }}>
+      <div style={{ background: "#0F1117", minHeight: "100vh", display: "grid", placeItems: "center", color: "#E8EAF0" }}>
         Carregando controle...
       </div>
     );
@@ -252,10 +251,10 @@ export default function ControlePage() {
   return (
     <div className="page-shell">
       <header className="app-header">
-        <div className="app-header-inner">
-          <div>
+        <div className="app-header-inner" style={{ flexDirection: "row", flexWrap: "nowrap" }}>
+          <div style={{ minWidth: 0 }}>
             <h1 style={{ margin: 0, fontSize: 20 }}>Controle</h1>
-            <p style={{ margin: "4px 0 0", color: "#7A82A0", fontSize: 13 }}>
+            <p style={{ margin: "4px 0 0", color: "#E8EAF0", fontSize: 13 }}>
               Resumo de checklists e atividades do CGC finalizados
             </p>
           </div>
@@ -382,7 +381,7 @@ export default function ControlePage() {
             type="button"
             onClick={() => { setLoading(true); Promise.all([fetchChecklists(), fetchCgcGroups()]).finally(() => setLoading(false)); }}
             style={{
-              background: "transparent", border: "1px solid #2A3045", color: "#7A82A0",
+              background: "transparent", border: "1px solid #2A3045", color: "#E8EAF0",
               borderRadius: 6, padding: "8px 14px", fontSize: 13, cursor: "pointer",
               display: "inline-flex", alignItems: "center", gap: 6,
             }}
