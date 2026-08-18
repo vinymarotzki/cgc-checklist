@@ -13,9 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { initDb } from "@/lib/db";
-import { listGroups } from "@/lib/cgc/groups";
-import { syncGroupMessages } from "@/lib/cgc/message-cache";
+import { syncAllGroups } from "@/lib/cgc/message-cache";
 import { resolveSasiToken } from "@/lib/sasi-api/client";
 
 export const maxDuration = 60;
@@ -38,25 +36,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "SASI_API_TOKEN não configurado." }, { status: 500 });
   }
 
-  await initDb();
-  const groups = await listGroups();
-
-  const results = await Promise.allSettled(
-    groups.map((group) => syncGroupMessages(group, token))
-  );
-
-  const failed = results
-    .map((result, index) => ({ result, group: groups[index] }))
-    .filter(({ result }) => result.status === "rejected");
-
-  for (const { result, group } of failed) {
-    const reason = result as PromiseRejectedResult;
-    console.error(`[cgc-cron-sync] falha ao sincronizar grupo "${group.name}": ${reason.reason}`);
-  }
-
-  return NextResponse.json({
-    synced: groups.length - failed.length,
-    total: groups.length,
-    failed: failed.map(({ group }) => group.name),
-  });
+  const result = await syncAllGroups(token);
+  return NextResponse.json(result);
 }
