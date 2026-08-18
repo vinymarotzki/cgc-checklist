@@ -70,6 +70,45 @@ function isStale(state: SyncState | null): boolean {
   return Date.now() - new Date(state.syncedAt).getTime() >= SYNC_TTL_MS;
 }
 
+/**
+ * Reivindica a sincronização do grupo de forma atômica, pra evitar o notify
+ * duplicado: com poll do client (15s), cron do GitHub Actions (5min) e agora
+ * o webhook (instantâneo) todos podendo cair no mesmo grupo quase ao mesmo
+ * tempo, um simples "lê o estado, depois de buscar tudo grava o novo estado"
+ * deixava duas chamadas concorrentes lerem o mesmo estado obsoleto, ambas
+ * buscarem a mesma atividade "nova" e ambas dispararem notifySubscription.
+ *
+ * Compare-and-swap em `synced_at`: só quem conseguir mover o timestamp (via
+ * UPDATE condicional ou INSERT que não colide) segue em frente; quem perder
+ * a corrida recebe null e sai sem tocar em nada, sem novo notify.
+ */
+async function tryClaimSync(groupId: string): Promise<SyncState | null> {
+  await initDb();
+  const db = getDb();
+  const state = await getSyncState(groupId);
+  if (!isStale(state)) return null;
+
+  const now = new Date().toISOString();
+
+  if (!state) {
+    const result = await db.execute({
+      sql: `INSERT INTO cgc_message_cache_sync (group_id, last_message_id, synced_at)
+            VALUES (?, NULL, ?)
+            ON CONFLICT(group_id) DO NOTHING`,
+      args: [groupId, now],
+    });
+    if (Number(result.rowsAffected) === 0) return null;
+    return { lastMessageId: null, syncedAt: now };
+  }
+
+  const result = await db.execute({
+    sql: `UPDATE cgc_message_cache_sync SET synced_at = ? WHERE group_id = ? AND synced_at = ?`,
+    args: [now, groupId, state.syncedAt],
+  });
+  if (Number(result.rowsAffected) === 0) return null;
+  return state;
+}
+
 async function upsertActivity(groupId: string, activity: CgcActivity): Promise<void> {
   const db = getDb();
   await db.execute({
@@ -128,10 +167,10 @@ async function ingestBatch(
 export async function syncGroupMessages(group: CgcGroup, token: string): Promise<void> {
   if (groupIsUnconfigured(group)) return;
 
-  const state = await getSyncState(group.id);
-  if (!isStale(state)) return;
+  const state = await tryClaimSync(group.id);
+  if (!state) return;
 
-  const sinceId = state?.lastMessageId ?? 0;
+  const sinceId = state.lastMessageId ?? 0;
   const baseQuery = groupToMessagesQuery(group);
   const fieldRule = groupToFieldRule(group);
 
