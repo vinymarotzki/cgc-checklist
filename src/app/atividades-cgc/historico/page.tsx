@@ -7,7 +7,7 @@ import { useSasiToken } from "@/hooks/useSasiToken";
 import { STATUS_LABELS, getStatusColor, getStatusPillStyle } from "@/lib/checklist-status";
 import {
   Lock, ArrowLeft, History, MessageSquare, Pencil, Trash2, RefreshCw,
-  FileText, ChevronDown, ChevronUp, type LucideIcon,
+  FileText, ChevronDown, ChevronUp, User, type LucideIcon,
 } from "lucide-react";
 
 interface CgcHistoryEntry {
@@ -222,25 +222,26 @@ function CgcHistoryPage() {
   return (
     <div className="page-shell">
       <header className="history-header">
-        <div className="history-header-inner">
-          <div className="history-header-left">
-            <Link href={backHref} className="history-back-link"><ArrowLeft size={14} /> Voltar</Link>
+        <div className="history-header-inner" style={{ flexDirection: "row", flexWrap: "nowrap" }}>
+          <div className="history-header-left" style={{ width: "auto", flex: "0 0 auto" }}>
+            <Link href={backHref} className="history-back-link" style={{ whiteSpace: "nowrap" }}>
+              <ArrowLeft size={14} /> Voltar
+            </Link>
           </div>
-          <div className="history-header-main">
-            <span className="history-page-title"><History size={15} /> Histórico</span>
+          <div className="history-header-main" style={{ flexWrap: "nowrap", width: "auto", minWidth: 0 }}>
+            <span className="history-page-title" style={{ width: "auto", whiteSpace: "nowrap" }}>
+              <History size={15} /> Histórico
+            </span>
             <div className="history-user-badge" style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "6px 12px", background: "#1E2333",
-              borderRadius: 6, border: "1px solid #2A3045"
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "6px 10px", background: "#1E2333",
+              borderRadius: 6, border: "1px solid #2A3045",
+              width: "auto", flexShrink: 0
             }}>
-              <div style={{
-                width: 24, height: 24, background: "#3B6EF5",
-                borderRadius: "50%", display: "flex", alignItems: "center",
-                justifyContent: "center", fontSize: 11, fontWeight: 700, color: "white"
-              }}>
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-              <span style={{ color: "#E8EAF0", fontSize: 13 }}>{user.name}</span>
+              <User size={14} color="#7A82A0" />
+              <span style={{ color: "#E8EAF0", fontSize: 13, whiteSpace: "nowrap" }}>
+                {user.name.split(" ")[0]}
+              </span>
             </div>
           </div>
         </div>
