@@ -6,7 +6,7 @@ import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
 import Link from "next/link";
 import { Suspense } from "react";
-import { History, ClipboardList, Search, MessageSquare, Pencil, X, Lock, Settings, User } from "lucide-react";
+import { History, ArrowLeft, Search, MessageSquare, Pencil, X, Lock, Settings, User } from "lucide-react";
 import {
   STATUS_OPTIONS,
   getCategoryColor,
@@ -226,7 +226,7 @@ function ChecklistPage() {
             animation: "spin 0.8s linear infinite", margin: "0 auto 16px"
           }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ color: "#7A82A0", fontSize: 14 }}>Autenticando...</p>
+          <p style={{ color: "#E8EAF0", fontSize: 14 }}>Autenticando...</p>
         </div>
       </div>
     );
@@ -243,11 +243,11 @@ function ChecklistPage() {
           <h2 style={{ color: "#F87171", fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
             Acesso negado
           </h2>
-          <p style={{ color: "#7A82A0", fontSize: 14, lineHeight: 1.6 }}>
+          <p style={{ color: "#E8EAF0", fontSize: 14, lineHeight: 1.6 }}>
             Token inválido ou não informado. Acesse o sistema pelo link de acesso fornecido.
           </p>
           {!token && (
-            <p style={{ color: "#4A5270", fontSize: 12, marginTop: 12, fontFamily: "monospace" }}>
+            <p style={{ color: "#E8EAF0", fontSize: 12, marginTop: 12, fontFamily: "monospace" }}>
               URL esperada: /?sasi-token=SEU_TOKEN
             </p>
           )}
@@ -267,7 +267,7 @@ function ChecklistPage() {
           <h1 style={{ color: "#E8EAF0", fontSize: 22, fontWeight: 700, margin: "0 0 10px" }}>
             Selecione um checklist
           </h1>
-          <p style={{ color: "#7A82A0", fontSize: 14, lineHeight: 1.6, margin: "0 0 20px" }}>
+          <p style={{ color: "#E8EAF0", fontSize: 14, lineHeight: 1.6, margin: "0 0 20px" }}>
             Abra a tela de checklists para escolher um cadastro ou importar uma nova planilha.
           </p>
           <Link
@@ -302,7 +302,7 @@ function ChecklistPage() {
             <Link
               href="/history"
               style={{
-                color: "#7A82A0", fontSize: 13, textDecoration: "none",
+                color: "#E8EAF0", fontSize: 13, textDecoration: "none",
                 display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
                 padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
                 transition: "all 0.15s"
@@ -313,31 +313,31 @@ function ChecklistPage() {
             <Link
               href="/checklists"
               style={{
-                color: "#7A82A0", fontSize: 13, textDecoration: "none",
+                color: "#E8EAF0", fontSize: 13, textDecoration: "none",
                 display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
                 padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
                 transition: "all 0.15s"
               }}
             >
-              <ClipboardList size={14} /> Checklists
+              <ArrowLeft size={14} /> Voltar
             </Link>
             <Link
               href={`/admin?checklist=${encodeURIComponent(checklistId)}`}
               style={{
-                color: "#7A82A0", fontSize: 13, textDecoration: "none",
+                color: "#E8EAF0", fontSize: 13, textDecoration: "none",
                 display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
                 padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
                 transition: "all 0.15s"
               }}
             >
-              <Settings size={14} /> Editar conteúdo
+              <Settings size={14} /> Editar
             </Link>
             <div style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 10px", background: "#1E2333",
               borderRadius: 6, border: "1px solid #2A3045", flexShrink: 0
             }}>
-              <User size={14} color="#7A82A0" />
+              <User size={14} color="#E8EAF0" />
               <span style={{ color: "#E8EAF0", fontSize: 13, whiteSpace: "nowrap" }}>
                 {user.name.split(" ")[0]}
               </span>
@@ -357,7 +357,7 @@ function ChecklistPage() {
               <h1 style={{ color: "#E8EAF0", fontSize: 22, fontWeight: 700, margin: 0 }}>
                 Checklist selecionado
               </h1>
-              <p style={{ color: "#7A82A0", fontSize: 13, marginTop: 4 }}>
+              <p style={{ color: "#E8EAF0", fontSize: 13, marginTop: 4 }}>
                 {totalStats.total} atividades · {totalStats.done} concluídas
               </p>
             </div>
@@ -371,7 +371,7 @@ function ChecklistPage() {
                   <div style={{ color: stat.color, fontSize: 24, fontWeight: 700, lineHeight: 1 }}>
                     {stat.value}
                   </div>
-                  <div style={{ color: "#4A5270", fontSize: 11, marginTop: 4 }}>{stat.label}</div>
+                  <div style={{ color: "#E8EAF0", fontSize: 11, marginTop: 4 }}>{stat.label}</div>
                 </div>
               ))}
             </div>
@@ -380,7 +380,7 @@ function ChecklistPage() {
           {/* Progress bar */}
           <div style={{ marginTop: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <span style={{ color: "#7A82A0", fontSize: 12 }}>Progresso geral</span>
+              <span style={{ color: "#E8EAF0", fontSize: 12 }}>Progresso geral</span>
               <span style={{ color: "#E8EAF0", fontSize: 12, fontWeight: 600 }}>{completionPct}%</span>
             </div>
             <div style={{ background: "#1E2333", borderRadius: 4, height: 6, overflow: "hidden", display: "flex" }}>
@@ -419,7 +419,7 @@ function ChecklistPage() {
                 fontSize: 13, outline: "none"
               }}
             />
-            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#4A5270" }} />
+            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#E8EAF0" }} />
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {["TODOS", "NAO_INICIADO", "EM_ANDAMENTO", "CONCLUIDO"].map((f) => {
@@ -450,7 +450,7 @@ function ChecklistPage() {
             textAlign: "center", padding: "60px 24px",
             background: "#181C27", borderRadius: 12, border: "1px solid #2A3045"
           }}>
-            <p style={{ color: "#7A82A0", fontSize: 15, margin: "0 0 16px" }}>
+            <p style={{ color: "#E8EAF0", fontSize: 15, margin: "0 0 16px" }}>
               {activities.length === 0 && !searchTerm && filter === "TODOS"
                 ? "Este checklist ainda não tem atividades. Adicione categorias e atividades para começar."
                 : "Nenhuma atividade encontrada"}
@@ -483,7 +483,7 @@ function ChecklistPage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ width: 3, height: 18, background: catColor, borderRadius: 2 }} />
                     <span style={{ color: "#E8EAF0", fontWeight: 600, fontSize: 14 }}>{category}</span>
-                    <span style={{ color: "#4A5270", fontSize: 12 }}>({items.length})</span>
+                    <span style={{ color: "#E8EAF0", fontSize: 12 }}>({items.length})</span>
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <span style={{ color: "#34D399", fontSize: 12 }}>{stats.done}/{stats.total}</span>
@@ -514,12 +514,12 @@ function ChecklistPage() {
                         <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
                           {/* Activity text */}
                           <div style={{ flex: 1, minWidth: 200 }}>
-                            <p style={{ color: "#C8CAD6", fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+                            <p style={{ color: "#E8EAF0", fontSize: 13, margin: 0, lineHeight: 1.5 }}>
                               {activity.activity}
                             </p>
                             {(observationsByActivity[activity.id] || []).map((note) => (
                               <div key={note.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, marginTop: 4 }}>
-                                <p style={{ color: "#4A5270", fontSize: 12, margin: 0, fontStyle: "italic", flex: 1, whiteSpace: "pre-wrap", lineHeight: 1.5, display: "flex", alignItems: "flex-start", gap: 5 }}>
+                                <p style={{ color: "#E8EAF0", fontSize: 12, margin: 0, fontStyle: "italic", flex: 1, whiteSpace: "pre-wrap", lineHeight: 1.5, display: "flex", alignItems: "flex-start", gap: 5 }}>
                                   <MessageSquare size={12} style={{ flexShrink: 0, marginTop: 2 }} /> {note.text}
                                 </p>
                                 <button
@@ -652,7 +652,7 @@ function ChecklistPage() {
                 }}
                 style={{
                   background: "transparent", border: "none",
-                  padding: "8px", color: "#7A82A0",
+                  padding: "8px", color: "#E8EAF0",
                   fontSize: 13, cursor: "pointer"
                 }}
               >
