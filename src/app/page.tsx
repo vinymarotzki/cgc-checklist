@@ -584,8 +584,7 @@ function ChecklistPage() {
                               style={{
                                 background: "transparent", border: "1px solid #2A3045",
                                 borderRadius: 6, padding: "5px 8px", cursor: "pointer", display: "flex",
-                                color: (observationsByActivity[activity.id] || []).length > 0 ? "#60A5FA" : "#4A5270",
-                                transition: "all 0.15s"
+                                color: (observationsByActivity[activity.id] || []).length > 0 ? "#60A5FA" : "#E8EAF0"
                               }}
                             >
                               <MessageSquare size={14} />
