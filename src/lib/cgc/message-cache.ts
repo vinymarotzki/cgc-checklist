@@ -17,7 +17,7 @@
 
 import { getDb, initDb } from "@/lib/db";
 import { getStatuses, backfillGroup } from "./status-store";
-import { groupIsUnconfigured, groupToFieldRule, groupToMessagesQuery } from "./groups";
+import { groupIsUnconfigured, groupToFieldRule, groupToMessagesQuery, listGroups } from "./groups";
 import { mapMessageToActivity, messageMatchesFieldRule } from "./mapper";
 import { SasiApiError } from "@/lib/sasi-api/client";
 import { SASI_MESSAGES_MAX_LIMIT, fetchProviderMessages } from "@/lib/sasi-api/messages";
@@ -210,6 +210,43 @@ export async function syncGroupMessages(group: CgcGroup, token: string): Promise
     if (error instanceof SasiApiError) return;
     throw error;
   }
+}
+
+export interface SyncAllGroupsResult {
+  synced: number;
+  total: number;
+  failed: string[];
+}
+
+/**
+ * Sincroniza todos os grupos configurados de uma vez — usado tanto pelo cron
+ * externo (GitHub Actions) quanto pela rota de webhook, que não tenta parsear
+ * o payload que a API SASI manda (formato não documentado); só usa a chamada
+ * como sinal de "algo mudou, verifica agora" e deixa syncGroupMessages (com
+ * seu TTL e marca d'água) fazer o trabalho de verdade, grupo por grupo.
+ */
+export async function syncAllGroups(token: string): Promise<SyncAllGroupsResult> {
+  await initDb();
+  const groups = await listGroups();
+
+  const results = await Promise.allSettled(
+    groups.map((group) => syncGroupMessages(group, token))
+  );
+
+  const failed = results
+    .map((result, index) => ({ result, group: groups[index] }))
+    .filter(({ result }) => result.status === "rejected");
+
+  for (const { result, group } of failed) {
+    const reason = result as PromiseRejectedResult;
+    console.error(`[cgc-sync-all] falha ao sincronizar grupo "${group.name}": ${reason.reason}`);
+  }
+
+  return {
+    synced: groups.length - failed.length,
+    total: groups.length,
+    failed: failed.map(({ group }) => group.name),
+  };
 }
 
 /** Busca pontual por id, direto do cache — usado pelo export do /controle. */
