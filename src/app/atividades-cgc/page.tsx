@@ -83,6 +83,11 @@ function formatNoteDate(iso: string) {
   });
 }
 
+function noteInitial(name: string | null) {
+  const trimmed = name?.trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() : "?";
+}
+
 function isOverdue(iso: string | null) {
   if (!iso) return false;
   const date = new Date(iso);
@@ -172,9 +177,21 @@ function AtividadesCgcPage() {
   // Cards de atividade escondem os campos dinâmicos por padrão; abrir um não
   // deve remover a memória dos outros já abertos, daí o Set em vez de um id só.
   const [expandedFieldIds, setExpandedFieldIds] = useState<Set<string>>(new Set());
+  // Mesma lógica: comentários também ficam escondidos por padrão, um card com
+  // vários comentários não deve empurrar a lista inteira pra baixo sozinho.
+  const [expandedNoteIds, setExpandedNoteIds] = useState<Set<string>>(new Set());
 
   function toggleFields(id: string) {
     setExpandedFieldIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleNotes(id: string) {
+    setExpandedNoteIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -797,76 +814,78 @@ function AtividadesCgcPage() {
                               {activity.description}
                             </p>
 
-                            {activity.fields.length > 0 && (
-                              <>
-                                <button
-                                  onClick={() => toggleFields(activity.id)}
-                                  style={{
-                                    background: "transparent", border: "none", padding: 0, marginTop: 8,
-                                    color: "#60A5FA", fontSize: 11, fontWeight: 600, cursor: "pointer",
-                                    display: "inline-flex", alignItems: "center", gap: 4
-                                  }}
-                                >
-                                  {expandedFieldIds.has(activity.id)
-                                    ? (<><ChevronUp size={12} /> Ocultar detalhes</>)
-                                    : (<><ChevronDown size={12} /> Ver detalhes ({activity.fields.length})</>)}
-                                </button>
-                                {expandedFieldIds.has(activity.id) && (
-                                  <div style={{ display: "grid", gap: 4, marginTop: 8 }}>
-                                    {activity.fields.map((field) => (
-                                      <div key={`${activity.id}-${field.name ?? field.title}`} className="field-row">
-                                        <span style={{ color: "#E8EAF0", fontSize: 11, fontWeight: 500, wordBreak: "break-word" }}>
-                                          {field.title || field.name}
-                                        </span>
-                                        <span style={{ color: "#E8EAF0", fontSize: 12, lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                                          {field.value}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
+                            {(activity.fields.length > 0 || (observationsByActivity[activity.id] || []).length > 0) && (
+                              <div className="cgc-toggle-row">
+                                {activity.fields.length > 0 && (
+                                  <button onClick={() => toggleFields(activity.id)} className="cgc-section-toggle">
+                                    {expandedFieldIds.has(activity.id)
+                                      ? (<><ChevronUp size={12} /> Ocultar detalhes</>)
+                                      : (<><ChevronDown size={12} /> Ver detalhes ({activity.fields.length})</>)}
+                                  </button>
                                 )}
-                              </>
+                                {(observationsByActivity[activity.id] || []).length > 0 && (
+                                  <button onClick={() => toggleNotes(activity.id)} className="cgc-section-toggle">
+                                    {expandedNoteIds.has(activity.id)
+                                      ? (<><ChevronUp size={12} /> Ocultar comentários</>)
+                                      : (<><ChevronDown size={12} /> {(observationsByActivity[activity.id] || []).length === 1
+                                          ? "1 comentário"
+                                          : `${(observationsByActivity[activity.id] || []).length} comentários`}</>)}
+                                  </button>
+                                )}
+                              </div>
                             )}
 
-                            {(observationsByActivity[activity.id] || []).map((note) => (
-                              <div key={note.id} style={{
-                                background: "#1E2333", border: "1px solid #2A3045", borderRadius: 8,
-                                padding: "8px 10px", marginTop: 6
-                              }}>
-                                <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                                  <p style={{
-                                    color: "#E8EAF0", fontSize: 12, margin: 0, flex: 1, minWidth: 0,
-                                    whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.5
-                                  }}>
-                                    {note.text}
-                                  </p>
-                                  <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
-                                    <button
-                                      onClick={() => {
-                                        setActiveActivityId(activity.id);
-                                        setEditingNoteId(note.id);
-                                        setObsValue(note.text);
-                                      }}
-                                      title="Editar comentário"
-                                      style={{ background: "transparent", border: "none", borderRadius: 4, padding: 4, cursor: "pointer", color: "#60A5FA", display: "flex" }}
-                                    >
-                                      <Pencil size={12} />
-                                    </button>
-                                    <button
-                                      onClick={() => deleteObs(note.id)}
-                                      title="Apagar comentário"
-                                      style={{ background: "transparent", border: "none", borderRadius: 4, padding: 4, cursor: "pointer", color: "#F87171", display: "flex" }}
-                                    >
-                                      <X size={12} />
-                                    </button>
+                            {expandedFieldIds.has(activity.id) && activity.fields.length > 0 && (
+                              <div style={{ display: "grid", gap: 4, marginTop: 8 }}>
+                                {activity.fields.map((field) => (
+                                  <div key={`${activity.id}-${field.name ?? field.title}`} className="field-row">
+                                    <span style={{ color: "#E8EAF0", fontSize: 11, fontWeight: 500, wordBreak: "break-word" }}>
+                                      {field.title || field.name}
+                                    </span>
+                                    <span style={{ color: "#E8EAF0", fontSize: 12, lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                      {field.value}
+                                    </span>
                                   </div>
-                                </div>
-                                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, color: "#E8EAF0", fontSize: 10, opacity: 0.7 }}>
-                                  <MessageSquare size={10} />
-                                  <span>{note.user_name || "—"} · {formatNoteDate(note.created_at)}</span>
-                                </div>
+                                ))}
                               </div>
-                            ))}
+                            )}
+
+                            {expandedNoteIds.has(activity.id) && (
+                              <div className="cgc-notes-box">
+                                {(observationsByActivity[activity.id] || []).map((note) => (
+                                  <div key={note.id} className="cgc-note">
+                                    <div className="cgc-note-avatar">{noteInitial(note.user_name)}</div>
+                                    <div className="cgc-note-body">
+                                      <div className="cgc-note-head">
+                                        <span className="cgc-note-author">{note.user_name || "Usuário"}</span>
+                                        <span className="cgc-note-time">{formatNoteDate(note.updated_at || note.created_at)}</span>
+                                      </div>
+                                      <p className="cgc-note-text">{note.text}</p>
+                                    </div>
+                                    <div className="cgc-note-actions">
+                                      <button
+                                        onClick={() => {
+                                          setActiveActivityId(activity.id);
+                                          setEditingNoteId(note.id);
+                                          setObsValue(note.text);
+                                        }}
+                                        title="Editar comentário"
+                                        className="cgc-note-action"
+                                      >
+                                        <Pencil size={12} />
+                                      </button>
+                                      <button
+                                        onClick={() => deleteObs(note.id)}
+                                        title="Apagar comentário"
+                                        className="cgc-note-action cgc-note-action-danger"
+                                      >
+                                        <X size={12} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
                               <span style={{
                                 fontSize: 11, borderRadius: 4, padding: "2px 8px",
@@ -907,14 +926,20 @@ function AtividadesCgcPage() {
                                 setEditingNoteId(null);
                                 setObsValue("");
                               }}
-                              title="Novo comentário"
-                              style={{
-                                background: "transparent", border: "1px solid #2A3045",
-                                borderRadius: 6, padding: "5px 8px", cursor: "pointer", display: "flex",
-                                color: (observationsByActivity[activity.id] || []).length > 0 ? "#60A5FA" : "#E8EAF0"
-                              }}
+                              title={
+                                (observationsByActivity[activity.id] || []).length > 0
+                                  ? "Ver ou adicionar comentário"
+                                  : "Novo comentário"
+                              }
+                              className="cgc-comment-button"
+                              data-has-notes={(observationsByActivity[activity.id] || []).length > 0}
                             >
-                              <MessageSquare size={14} />
+                              <MessageSquare size={15} />
+                              {(observationsByActivity[activity.id] || []).length > 0 && (
+                                <span className="cgc-comment-badge">
+                                  {(observationsByActivity[activity.id] || []).length}
+                                </span>
+                              )}
                             </button>
 
                             {isSavingThis && (
