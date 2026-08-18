@@ -32,8 +32,18 @@ interface Observation {
   id: string;
   activity_id: string;
   text: string;
+  user_name: string | null;
   created_at: string;
   updated_at: string;
+}
+
+function formatNoteDate(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
 }
 
 function groupByCategory(activities: Activity[]) {
@@ -518,36 +528,50 @@ function ChecklistPage() {
                               {activity.activity}
                             </p>
                             {(observationsByActivity[activity.id] || []).map((note) => (
-                              <div key={note.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, marginTop: 4 }}>
-                                <p style={{ color: "#E8EAF0", fontSize: 12, margin: 0, fontStyle: "italic", flex: 1, whiteSpace: "pre-wrap", lineHeight: 1.5, display: "flex", alignItems: "flex-start", gap: 5 }}>
-                                  <MessageSquare size={12} style={{ flexShrink: 0, marginTop: 2 }} /> {note.text}
-                                </p>
-                                <button
-                                  onClick={() => {
-                                    setActiveActivityId(activity.id);
-                                    setEditingNoteId(note.id);
-                                    setObsValue(note.text);
-                                  }}
-                                  title="Editar observação"
-                                  style={{
-                                    background: "transparent", border: "none",
-                                    padding: "4px", cursor: "pointer", display: "flex",
-                                    color: "#60A5FA", transition: "color 0.15s"
-                                  }}
-                                >
-                                  <Pencil size={12} />
-                                </button>
-                                <button
-                                  onClick={() => deleteObs(note.id)}
-                                  title="Apagar observação"
-                                  style={{
-                                    background: "transparent", border: "none",
-                                    padding: "4px", cursor: "pointer", display: "flex",
-                                    color: "#F87171", transition: "color 0.15s"
-                                  }}
-                                >
-                                  <X size={12} />
-                                </button>
+                              <div key={note.id} style={{
+                                background: "#1E2333", border: "1px solid #2A3045", borderRadius: 8,
+                                padding: "8px 10px", marginTop: 6
+                              }}>
+                                <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                                  <p style={{
+                                    color: "#E8EAF0", fontSize: 12, margin: 0, flex: 1, minWidth: 0,
+                                    whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.5
+                                  }}>
+                                    {note.text}
+                                  </p>
+                                  <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                                    <button
+                                      onClick={() => {
+                                        setActiveActivityId(activity.id);
+                                        setEditingNoteId(note.id);
+                                        setObsValue(note.text);
+                                      }}
+                                      title="Editar observação"
+                                      style={{
+                                        background: "transparent", border: "none", borderRadius: 4,
+                                        padding: "4px", cursor: "pointer", display: "flex",
+                                        color: "#60A5FA", transition: "color 0.15s"
+                                      }}
+                                    >
+                                      <Pencil size={12} />
+                                    </button>
+                                    <button
+                                      onClick={() => deleteObs(note.id)}
+                                      title="Apagar observação"
+                                      style={{
+                                        background: "transparent", border: "none", borderRadius: 4,
+                                        padding: "4px", cursor: "pointer", display: "flex",
+                                        color: "#F87171", transition: "color 0.15s"
+                                      }}
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, color: "#E8EAF0", fontSize: 10, opacity: 0.7 }}>
+                                  <MessageSquare size={10} />
+                                  <span>{note.user_name || "—"} · {formatNoteDate(note.created_at)}</span>
+                                </div>
                               </div>
                             ))}
                           </div>

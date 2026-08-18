@@ -74,6 +74,15 @@ function formatDate(value: string | null) {
   return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+function formatNoteDate(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
 function isOverdue(iso: string | null) {
   if (!iso) return false;
   const date = new Date(iso);
@@ -820,28 +829,42 @@ function AtividadesCgcPage() {
                             )}
 
                             {(observationsByActivity[activity.id] || []).map((note) => (
-                              <div key={note.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, marginTop: 4 }}>
-                                <p style={{ color: "#E8EAF0", fontSize: 12, margin: 0, fontStyle: "italic", flex: 1, minWidth: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.5, display: "flex", alignItems: "flex-start", gap: 5 }}>
-                                  <MessageSquare size={12} style={{ flexShrink: 0, marginTop: 2 }} /> {note.text}
-                                </p>
-                                <button
-                                  onClick={() => {
-                                    setActiveActivityId(activity.id);
-                                    setEditingNoteId(note.id);
-                                    setObsValue(note.text);
-                                  }}
-                                  title="Editar comentário"
-                                  style={{ background: "transparent", border: "none", padding: 4, cursor: "pointer", color: "#60A5FA", display: "flex" }}
-                                >
-                                  <Pencil size={12} />
-                                </button>
-                                <button
-                                  onClick={() => deleteObs(note.id)}
-                                  title="Apagar comentário"
-                                  style={{ background: "transparent", border: "none", padding: 4, cursor: "pointer", color: "#F87171", display: "flex" }}
-                                >
-                                  <X size={12} />
-                                </button>
+                              <div key={note.id} style={{
+                                background: "#1E2333", border: "1px solid #2A3045", borderRadius: 8,
+                                padding: "8px 10px", marginTop: 6
+                              }}>
+                                <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                                  <p style={{
+                                    color: "#E8EAF0", fontSize: 12, margin: 0, flex: 1, minWidth: 0,
+                                    whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.5
+                                  }}>
+                                    {note.text}
+                                  </p>
+                                  <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                                    <button
+                                      onClick={() => {
+                                        setActiveActivityId(activity.id);
+                                        setEditingNoteId(note.id);
+                                        setObsValue(note.text);
+                                      }}
+                                      title="Editar comentário"
+                                      style={{ background: "transparent", border: "none", borderRadius: 4, padding: 4, cursor: "pointer", color: "#60A5FA", display: "flex" }}
+                                    >
+                                      <Pencil size={12} />
+                                    </button>
+                                    <button
+                                      onClick={() => deleteObs(note.id)}
+                                      title="Apagar comentário"
+                                      style={{ background: "transparent", border: "none", borderRadius: 4, padding: 4, cursor: "pointer", color: "#F87171", display: "flex" }}
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, color: "#E8EAF0", fontSize: 10, opacity: 0.7 }}>
+                                  <MessageSquare size={10} />
+                                  <span>{note.user_name || "—"} · {formatNoteDate(note.created_at)}</span>
+                                </div>
                               </div>
                             ))}
                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
