@@ -17,6 +17,7 @@ import {
 } from "@/lib/cgc/groups";
 import { mapMessagesToActivities } from "@/lib/cgc/mapper";
 import { readSnapshot, recordHistory } from "@/lib/cgc/history";
+import { getNotifySubscriptionKey, notifySubscription } from "@/lib/sasi-api/notify";
 import { listGroupActivities, syncGroupMessages } from "@/lib/cgc/message-cache";
 import {
   backfillGroup,
@@ -247,6 +248,15 @@ export async function PATCH(req: NextRequest) {
         new_status: status,
         user,
       });
+
+      // Avisa só quando a atividade acabou de virar CONCLUIDO — best-effort,
+      // nunca derruba a troca de status se a API de notify falhar.
+      if (status === "CONCLUIDO") {
+        const text = snapshot.description
+          ? `${snapshot.description} foi concluída${snapshot.group_name ? ` (${snapshot.group_name})` : ""}.`
+          : `Uma atividade foi concluída${snapshot.group_name ? ` (${snapshot.group_name})` : ""}.`;
+        await notifySubscription(getNotifySubscriptionKey(), { title: "Atividades do CGC", text });
+      }
     }
 
     return NextResponse.json({ success: true, id, status });
