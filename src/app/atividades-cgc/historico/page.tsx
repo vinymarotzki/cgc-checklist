@@ -278,7 +278,7 @@ function CgcHistoryPage() {
               <p>Nenhum grupo cadastrado ainda.</p>
             </div>
           ) : (
-            <div className="history-completions-list">
+            <div className="history-completions-list" style={{ gridTemplateColumns: "1fr 1fr" }}>
               {groups.map((group) => {
                 const pct = group.total > 0 ? Math.round((group.concluded / group.total) * 100) : 0;
                 return (
