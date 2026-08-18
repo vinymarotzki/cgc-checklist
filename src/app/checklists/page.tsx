@@ -763,7 +763,7 @@ function ChecklistsPage() {
                 disabled={editorMode === 'edit' ? !editingChecklistTitle.trim() || saving : !title.trim() || saving}
                 style={{ background: "#3B6EF5", border: "none", color: "white", borderRadius: 8, padding: "9px 16px", fontWeight: 700, cursor: (editorMode === 'edit' ? !editingChecklistTitle.trim() : !title.trim()) || saving ? "not-allowed" : "pointer", opacity: (editorMode === 'edit' ? !editingChecklistTitle.trim() : !title.trim()) || saving ? 0.65 : 1 }}
               >
-                {saving ? (editorMode === 'edit' ? "Salvando..." : "Criando...") : editorMode === 'edit' ? "Salvar alterações" : parsedActivities.length > 0 ? "Confirmar importacao" : "Criar vazio"}
+                {saving ? (editorMode === 'edit' ? "Salvando..." : "Criando...") : editorMode === 'edit' ? "Salvar alterações" : parsedActivities.length > 0 ? "Confirmar importação" : "Criar vazio"}
               </button>
             </div>
           </div>
