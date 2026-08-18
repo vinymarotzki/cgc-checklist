@@ -92,6 +92,21 @@ function isOverdue(iso: string | null) {
   return !Number.isNaN(date.getTime()) && date.getTime() < Date.now();
 }
 
+/** Ordem de exibição dentro de cada grupo: não iniciadas primeiro, concluídas por último. */
+const STATUS_SORT_ORDER: Record<string, number> = {
+  NAO_INICIADO: 0,
+  SEM_STATUS: 0,
+  IMPEDIDO: 0,
+  EM_ANDAMENTO: 1,
+  CONCLUIDO: 2,
+};
+
+function sortByStatus(activities: CgcActivity[]) {
+  return [...activities].sort(
+    (a, b) => (STATUS_SORT_ORDER[a.status] ?? 0) - (STATUS_SORT_ORDER[b.status] ?? 0)
+  );
+}
+
 function groupByCategory(activities: CgcActivity[]) {
   const groups: Record<string, CgcActivity[]> = {};
   for (const activity of activities) {
@@ -630,7 +645,7 @@ function AtividadesCgcPage() {
   const filtered = activities.filter(
     (activity) => statusFilter === "TODOS" || activity.status === statusFilter
   );
-  const grouped = groupByCategory(filtered);
+  const grouped = groupByCategory(sortByStatus(filtered));
   const showCategoryHeaders = filtered.some((activity) => Boolean(activity.category));
 
   return (
