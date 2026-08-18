@@ -21,6 +21,7 @@ import { groupIsUnconfigured, groupToFieldRule, groupToMessagesQuery } from "./g
 import { mapMessageToActivity, messageMatchesFieldRule } from "./mapper";
 import { SasiApiError } from "@/lib/sasi-api/client";
 import { SASI_MESSAGES_MAX_LIMIT, fetchProviderMessages } from "@/lib/sasi-api/messages";
+import { getNotifySubscriptionKey, notifySubscription } from "@/lib/sasi-api/notify";
 import type { SasiProviderMessage } from "@/lib/sasi-api/types";
 import type { CgcActivity, CgcGroup } from "./types";
 
@@ -94,9 +95,10 @@ async function ingestBatch(
   group: CgcGroup,
   fieldRule: ReturnType<typeof groupToFieldRule>,
   sinceId: number
-): Promise<{ maxId: number; sawNew: boolean }> {
+): Promise<{ maxId: number; sawNew: boolean; matched: number }> {
   let maxId = sinceId;
   let sawNew = false;
+  let matched = 0;
 
   for (const message of batch) {
     const id = typeof message.id === "number" ? message.id : null;
@@ -109,12 +111,13 @@ async function ingestBatch(
     try {
       const activity = mapMessageToActivity(message, { groupName: group.name });
       await upsertActivity(group.id, activity);
+      matched += 1;
     } catch {
       // Mensagem irrecuperável: pula, não derruba a sincronização inteira.
     }
   }
 
-  return { maxId, sawNew };
+  return { maxId, sawNew, matched };
 }
 
 /**
@@ -134,6 +137,7 @@ export async function syncGroupMessages(group: CgcGroup, token: string): Promise
 
   try {
     let maxId = sinceId;
+    let newlyMatched = 0;
 
     if (sinceId === 0) {
       // Primeira sincronização do grupo (cache vazio): não há marca d'água
@@ -179,8 +183,9 @@ export async function syncGroupMessages(group: CgcGroup, token: string): Promise
         if (batch.length === 0) break;
         scanned += batch.length;
 
-        const { maxId: batchMaxId, sawNew } = await ingestBatch(batch, group, fieldRule, sinceId);
+        const { maxId: batchMaxId, sawNew, matched } = await ingestBatch(batch, group, fieldRule, sinceId);
         if (batchMaxId > maxId) maxId = batchMaxId;
+        newlyMatched += matched;
 
         // Página sem nada novo: assume que o resto já foi visto e para de paginar.
         if (!sawNew) break;
@@ -191,6 +196,16 @@ export async function syncGroupMessages(group: CgcGroup, token: string): Promise
     }
 
     await saveSyncState(group.id, maxId);
+
+    // Só avisa em cima do incremental (sinceId > 0): a primeira sincronização
+    // de um grupo (backfill) não deve virar uma enxurrada de push sobre
+    // atividade velha. Best-effort — nunca derruba a sincronização.
+    if (sinceId > 0 && newlyMatched > 0) {
+      const text = newlyMatched === 1
+        ? `1 nova atividade em ${group.name}.`
+        : `${newlyMatched} novas atividades em ${group.name}.`;
+      await notifySubscription(getNotifySubscriptionKey(), { title: "Atividades do CGC", text });
+    }
   } catch (error) {
     if (error instanceof SasiApiError) return;
     throw error;
