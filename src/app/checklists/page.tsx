@@ -381,7 +381,7 @@ function ChecklistsPage() {
 
   if (loading) {
     return (
-      <div style={{ background: "#0F1117", minHeight: "100vh", display: "grid", placeItems: "center", color: "#7A82A0" }}>
+      <div style={{ background: "#0F1117", minHeight: "100vh", display: "grid", placeItems: "center", color: "#E8EAF0" }}>
         Carregando checklists...
       </div>
     );
@@ -399,7 +399,7 @@ function ChecklistsPage() {
         <div style={{ background: "#181C27", border: "1px solid #2A1A1A", borderRadius: 12, padding: 32, maxWidth: 420, textAlign: "center" }}>
           <Lock size={36} color="#F87171" style={{ marginBottom: 16 }} />
           <h1 style={{ color: "#F87171", fontSize: 20, margin: "0 0 8px" }}>Acesso negado</h1>
-          <p style={{ color: "#7A82A0", fontSize: 14, margin: 0 }}>Token inválido ou não informado.</p>
+          <p style={{ color: "#E8EAF0", fontSize: 14, margin: 0 }}>Token inválido ou não informado.</p>
         </div>
       </div>
     );
@@ -413,7 +413,7 @@ function ChecklistsPage() {
             <h1 style={{ margin: 0, fontSize: 20, whiteSpace: "nowrap" }}>Checklists</h1>
           </div>
           <div className="app-nav">
-            <Link href={listHref} style={{ color: "#7A82A0", fontSize: 13, textDecoration: "none", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+            <Link href={listHref} style={{ color: "#E8EAF0", fontSize: 13, textDecoration: "none", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
               <RefreshCw size={14} /> Atualizar
             </Link>
             <button
@@ -427,7 +427,7 @@ function ChecklistsPage() {
               background: "#1E2333", border: "1px solid #2A3045", borderRadius: 8,
               padding: "6px 10px", fontSize: 13, whiteSpace: "nowrap", flexShrink: 0
             }}>
-              <User size={14} color="#7A82A0" /> {user.name.split(" ")[0]}
+              <User size={14} color="#E8EAF0" /> {user.name.split(" ")[0]}
             </span>
           </div>
         </div>
@@ -442,7 +442,7 @@ function ChecklistsPage() {
           }}>
             {[
               { label: "Checklists", value: checklists.length, color: "#60A5FA" },
-              { label: "Atividades", value: totalActivities, color: "#7A82A0" },
+              { label: "Atividades", value: totalActivities, color: "#E8EAF0" },
               { label: "Concluídas", value: totalCompleted, color: "#34D399" },
               { label: "Progresso médio", value: `${avgProgress}%`, color: progressColor(avgProgress) },
             ].map((stat) => (
@@ -451,7 +451,7 @@ function ChecklistsPage() {
                 borderRadius: 10, padding: "10px 14px"
               }}>
                 <div style={{ color: stat.color, fontSize: 18, fontWeight: 700, lineHeight: 1 }}>{stat.value}</div>
-                <div style={{ color: "#7A82A0", fontSize: 11, marginTop: 4 }}>{stat.label}</div>
+                <div style={{ color: "#E8EAF0", fontSize: 11, marginTop: 4 }}>{stat.label}</div>
               </div>
             ))}
           </div>
@@ -460,7 +460,7 @@ function ChecklistsPage() {
         {checklists.length === 0 ? (
           <div style={{ background: "#181C27", border: "1px solid #2A3045", borderRadius: 12, padding: 40, textAlign: "center" }}>
             <h2 style={{ margin: "0 0 8px", fontSize: 18 }}>Nenhum checklist cadastrado</h2>
-            <p style={{ margin: 0, color: "#7A82A0", fontSize: 14 }}>Crie um checklist vazio ou importe uma planilha CSV/XLSX.</p>
+            <p style={{ margin: 0, color: "#E8EAF0", fontSize: 14 }}>Crie um checklist vazio ou importe uma planilha CSV/XLSX.</p>
           </div>
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
@@ -477,13 +477,13 @@ function ChecklistsPage() {
                 <div style={{ minWidth: 0 }}>
                   <h2 style={{ margin: "0 0 10px", fontSize: 17, fontWeight: 700 }}>{checklist.title}</h2>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#7A82A0", fontSize: 12 }}>
+                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#E8EAF0", fontSize: 12 }}>
                       {formatDate(checklist.created_at)}
                     </span>
-                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#7A82A0", fontSize: 12 }}>
+                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#E8EAF0", fontSize: 12 }}>
                       {checklist.created_by_name || "Sem autor"}
                     </span>
-                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#7A82A0", fontSize: 12 }}>
+                    <span style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 999, padding: "3px 10px", color: "#E8EAF0", fontSize: 12 }}>
                       {checklist.completed_count}/{checklist.activity_count} atividades
                     </span>
                   </div>
@@ -540,7 +540,7 @@ function ChecklistsPage() {
                     type="button"
                     variant="outline"
                     size="icon-sm"
-                    style={{ background: "#1E2333", borderColor: "#2A3045", color: "#7A82A0" }}
+                    style={{ background: "#1E2333", borderColor: "#2A3045", color: "#E8EAF0" }}
                     aria-label={openActionsId === checklist.id ? "Fechar ações" : "Abrir ações"}
                     aria-expanded={openActionsId === checklist.id}
                     onClick={() =>
@@ -579,10 +579,10 @@ function ChecklistsPage() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "grid", placeItems: "center", padding: 20, zIndex: 1000 }} onClick={(e) => e.target === e.currentTarget && closeModal()}>
           <div style={{ background: "#1E2333", border: "1px solid #2A3045", borderRadius: 12, padding: 24, width: "100%", maxWidth: 760, maxHeight: "90vh", overflow: "auto" }}>
             <h2 style={{ margin: "0 0 4px", fontSize: 18 }}>{editorMode === 'edit' ? 'Editar checklist' : 'Novo checklist'}</h2>
-            <p style={{ margin: "0 0 18px", color: "#7A82A0", fontSize: 13 }}>
+            <p style={{ margin: "0 0 18px", color: "#E8EAF0", fontSize: 13 }}>
               {editorMode === 'edit' ? 'Altere o título deste checklist.' : 'Crie um checklist vazio ou importe as atividades de uma planilha.'}
             </p>
-            <label style={{ color: "#C8CAD6", fontSize: 13, display: "flex", flexDirection: "column", gap: 6 }}>
+            <label style={{ color: "#E8EAF0", fontSize: 13, display: "flex", flexDirection: "column", gap: 6 }}>
               Título
               <input
                 value={editorMode === 'edit' ? editingChecklistTitle : title}
@@ -599,9 +599,9 @@ function ChecklistsPage() {
                     <strong style={{ fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
                       <Upload size={14} /> Importar planilha
                     </strong>
-                    <p style={{ margin: "4px 0 0", color: "#7A82A0", fontSize: 13 }}>Selecione quais colunas devem ser importadas. Use &quot;Não importar&quot; para ignorar colunas opcionais.</p>
+                    <p style={{ margin: "4px 0 0", color: "#E8EAF0", fontSize: 13 }}>Selecione quais colunas devem ser importadas. Use &quot;Não importar&quot; para ignorar colunas opcionais.</p>
                   </div>
-                  <input type="file" accept="*/*" onChange={(e) => handleFile(e.target.files?.[0] || null)} style={{ color: "#C8CAD6", fontSize: 13 }} />
+                  <input type="file" accept="*/*" onChange={(e) => handleFile(e.target.files?.[0] || null)} style={{ color: "#E8EAF0", fontSize: 13 }} />
                 </div>
 
                 {parseError && <p style={{ color: "#F87171", fontSize: 13, margin: "12px 0 0" }}>{parseError}</p>}
@@ -615,7 +615,7 @@ function ChecklistsPage() {
                     {detectedColumns.length > 0 && (
                       <div style={{ display: "grid", gap: 12, marginBottom: 16 }}>
                         <div className="two-col">
-                          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#C8CAD6" }}>
+                          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#E8EAF0" }}>
                             Coluna Categoria
                             <select
                               value={selectedCategoryColumn ?? 0}
@@ -638,7 +638,7 @@ function ChecklistsPage() {
                             </select>
                           </label>
 
-                          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#C8CAD6" }}>
+                          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#E8EAF0" }}>
                             Coluna Atividade
                             <select
                               value={selectedActivityColumn ?? 1}
@@ -662,7 +662,7 @@ function ChecklistsPage() {
                           </label>
                         </div>
                         <div className="two-col">
-                          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#C8CAD6" }}>
+                          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#E8EAF0" }}>
                             Coluna Status
                             <select
                               value={selectedStatusColumn ?? -1}
@@ -687,7 +687,7 @@ function ChecklistsPage() {
                             </select>
                           </label>
 
-                          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#C8CAD6" }}>
+                          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#E8EAF0" }}>
                             Coluna Responsável
                             <select
                               value={selectedResponsibleColumn ?? -1}
@@ -713,7 +713,7 @@ function ChecklistsPage() {
                           </label>
                         </div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
-                          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#C8CAD6" }}>
+                          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#E8EAF0" }}>
                             Coluna Observação
                             <select
                               value={selectedObservationColumn ?? -1}
@@ -745,7 +745,7 @@ function ChecklistsPage() {
                       {parsedActivities.slice(0, 100).map((item, index) => (
                         <div key={`${item.category}-${index}`} className="import-row">
                           <span style={{ color: "#60A5FA" }}>{item.category}</span>
-                          <span style={{ color: "#C8CAD6" }}>{item.activity}</span>
+                          <span style={{ color: "#E8EAF0" }}>{item.activity}</span>
                         </div>
                       ))}
                     </div>
@@ -757,7 +757,7 @@ function ChecklistsPage() {
             {editorMode === 'edit' && parseError && <p style={{ color: "#F87171", fontSize: 13, margin: "12px 0 0" }}>{parseError}</p>}
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>
-              <button onClick={closeModal} style={{ background: "transparent", border: "none", color: "#7A82A0", padding: "9px 12px", cursor: "pointer" }}>Cancelar</button>
+              <button onClick={closeModal} style={{ background: "transparent", border: "none", color: "#E8EAF0", padding: "9px 12px", cursor: "pointer" }}>Cancelar</button>
               <button
                 onClick={editorMode === 'edit' ? updateChecklist : createChecklist}
                 disabled={editorMode === 'edit' ? !editingChecklistTitle.trim() || saving : !title.trim() || saving}

@@ -183,7 +183,7 @@ function HistoryPage() {
             animation: "spin 0.8s linear infinite", margin: "0 auto 16px"
           }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ color: "#7A82A0", fontSize: 14 }}>Carregando histórico...</p>
+          <p style={{ color: "#E8EAF0", fontSize: 14 }}>Carregando histórico...</p>
         </div>
       </div>
     );
@@ -198,7 +198,7 @@ function HistoryPage() {
         }}>
           <Lock size={36} color="#F87171" style={{ marginBottom: 16 }} />
           <h2 style={{ color: "#F87171", fontSize: 20, fontWeight: 600 }}>Acesso negado</h2>
-          <p style={{ color: "#7A82A0", fontSize: 14 }}>Token inválido ou não informado.</p>
+          <p style={{ color: "#E8EAF0", fontSize: 14 }}>Token inválido ou não informado.</p>
         </div>
       </div>
     );
@@ -227,7 +227,7 @@ function HistoryPage() {
               borderRadius: 6, border: "1px solid #2A3045",
               width: "auto", flexShrink: 0
             }}>
-              <User size={14} color="#7A82A0" />
+              <User size={14} color="#E8EAF0" />
               <span style={{ color: "#E8EAF0", fontSize: 13, whiteSpace: "nowrap" }}>
                 {user.name.split(" ")[0]}
               </span>
@@ -364,7 +364,7 @@ function HistoryPage() {
                                     <span className="history-status-pill" style={getStatusPillStyle(entry.old_status)}>
                                       {STATUS_LABELS[entry.old_status] || entry.old_status || "—"}
                                     </span>
-                                    <span style={{ color: "#7A82A0", fontSize: 14 }}>→</span>
+                                    <span style={{ color: "#E8EAF0", fontSize: 14 }}>→</span>
                                     <span className="history-status-pill" style={getStatusPillStyle(entry.new_status)}>
                                       {STATUS_LABELS[entry.new_status] || entry.new_status || "—"}
                                     </span>

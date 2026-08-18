@@ -243,7 +243,7 @@ export default function ControlePage() {
 
   if (loading) {
     return (
-      <div style={{ background: "#0F1117", minHeight: "100vh", display: "grid", placeItems: "center", color: "#7A82A0" }}>
+      <div style={{ background: "#0F1117", minHeight: "100vh", display: "grid", placeItems: "center", color: "#E8EAF0" }}>
         Carregando controle...
       </div>
     );
@@ -255,7 +255,7 @@ export default function ControlePage() {
         <div className="app-header-inner" style={{ flexDirection: "row", flexWrap: "nowrap" }}>
           <div style={{ minWidth: 0 }}>
             <h1 style={{ margin: 0, fontSize: 20 }}>Controle</h1>
-            <p style={{ margin: "4px 0 0", color: "#7A82A0", fontSize: 13 }}>
+            <p style={{ margin: "4px 0 0", color: "#E8EAF0", fontSize: 13 }}>
               Resumo de checklists e atividades do CGC finalizados
             </p>
           </div>
@@ -382,7 +382,7 @@ export default function ControlePage() {
             type="button"
             onClick={() => { setLoading(true); Promise.all([fetchChecklists(), fetchCgcGroups()]).finally(() => setLoading(false)); }}
             style={{
-              background: "transparent", border: "1px solid #2A3045", color: "#7A82A0",
+              background: "transparent", border: "1px solid #2A3045", color: "#E8EAF0",
               borderRadius: 6, padding: "8px 14px", fontSize: 13, cursor: "pointer",
               display: "inline-flex", alignItems: "center", gap: 6,
             }}

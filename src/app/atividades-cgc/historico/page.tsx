@@ -199,7 +199,7 @@ function CgcHistoryPage() {
 
   if (loading) {
     return (
-      <div style={{ background: "#0F1117", minHeight: "100vh", display: "grid", placeItems: "center", color: "#7A82A0" }}>
+      <div style={{ background: "#0F1117", minHeight: "100vh", display: "grid", placeItems: "center", color: "#E8EAF0" }}>
         Carregando histórico...
       </div>
     );
@@ -211,7 +211,7 @@ function CgcHistoryPage() {
         <div style={{ background: "#181C27", border: "1px solid #2A1A1A", borderRadius: 12, padding: 32, maxWidth: 420, textAlign: "center" }}>
           <Lock size={36} color="#F87171" style={{ marginBottom: 16 }} />
           <h1 style={{ color: "#F87171", fontSize: 20, margin: "0 0 8px" }}>Acesso negado</h1>
-          <p style={{ color: "#7A82A0", fontSize: 14, margin: 0 }}>Token inválido ou não informado.</p>
+          <p style={{ color: "#E8EAF0", fontSize: 14, margin: 0 }}>Token inválido ou não informado.</p>
         </div>
       </div>
     );
@@ -238,7 +238,7 @@ function CgcHistoryPage() {
               borderRadius: 6, border: "1px solid #2A3045",
               width: "auto", flexShrink: 0
             }}>
-              <User size={14} color="#7A82A0" />
+              <User size={14} color="#E8EAF0" />
               <span style={{ color: "#E8EAF0", fontSize: 13, whiteSpace: "nowrap" }}>
                 {user.name.split(" ")[0]}
               </span>
@@ -410,7 +410,7 @@ function CgcHistoryPage() {
                                     <span className="history-status-pill" style={getStatusPillStyle(entry.old_status)}>
                                       {STATUS_LABELS[entry.old_status || "SEM_STATUS"] || entry.old_status || "—"}
                                     </span>
-                                    <span style={{ color: "#7A82A0", fontSize: 14 }}>→</span>
+                                    <span style={{ color: "#E8EAF0", fontSize: 14 }}>→</span>
                                     <span className="history-status-pill" style={getStatusPillStyle(entry.new_status)}>
                                       {STATUS_LABELS[entry.new_status || "SEM_STATUS"] || entry.new_status || "—"}
                                     </span>

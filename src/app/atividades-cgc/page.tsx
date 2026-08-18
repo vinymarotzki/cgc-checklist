@@ -458,7 +458,7 @@ function AtividadesCgcPage() {
             animation: "spin 0.8s linear infinite", margin: "0 auto 16px"
           }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ color: "#7A82A0", fontSize: 14 }}>Autenticando...</p>
+          <p style={{ color: "#E8EAF0", fontSize: 14 }}>Autenticando...</p>
         </div>
       </div>
     );
@@ -475,11 +475,11 @@ function AtividadesCgcPage() {
           <h2 style={{ color: "#F87171", fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
             Acesso negado
           </h2>
-          <p style={{ color: "#7A82A0", fontSize: 14, lineHeight: 1.6 }}>
+          <p style={{ color: "#E8EAF0", fontSize: 14, lineHeight: 1.6 }}>
             Token inválido ou não informado. Acesse o sistema pelo link de acesso fornecido.
           </p>
           {!token && (
-            <p style={{ color: "#4A5270", fontSize: 12, marginTop: 12, fontFamily: "monospace" }}>
+            <p style={{ color: "#E8EAF0", fontSize: 12, marginTop: 12, fontFamily: "monospace" }}>
               URL esperada: /atividades-cgc?sasi-token=SEU_TOKEN
             </p>
           )}
@@ -496,7 +496,7 @@ function AtividadesCgcPage() {
             <Link
               href="/atividades-cgc"
               style={{
-                color: "#7A82A0", fontSize: 13, textDecoration: "none",
+                color: "#E8EAF0", fontSize: 13, textDecoration: "none",
                 padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
                 display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap"
               }}
@@ -512,7 +512,7 @@ function AtividadesCgcPage() {
           <Link
             href="/atividades-cgc/historico"
             style={{
-              color: "#7A82A0", fontSize: 13, textDecoration: "none",
+              color: "#E8EAF0", fontSize: 13, textDecoration: "none",
               padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
               display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap"
             }}
@@ -524,7 +524,7 @@ function AtividadesCgcPage() {
             padding: "6px 10px", background: "#1E2333",
             borderRadius: 6, border: "1px solid #2A3045", flexShrink: 0
           }}>
-            <User size={14} color="#7A82A0" />
+            <User size={14} color="#E8EAF0" />
             <span style={{ color: "#E8EAF0", fontSize: 13, whiteSpace: "nowrap" }}>
               {user.name.split(" ")[0]}
             </span>
@@ -553,7 +553,7 @@ function AtividadesCgcPage() {
           {groups.length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 24px", background: "#181C27", borderRadius: 12, border: "1px solid #2A3045" }}>
               <h2 style={{ margin: "0 0 8px", fontSize: 18, color: "#E8EAF0" }}>Nenhum grupo cadastrado</h2>
-              <p style={{ margin: 0, color: "#7A82A0", fontSize: 14 }}>
+              <p style={{ margin: 0, color: "#E8EAF0", fontSize: 14 }}>
                 Crie um grupo para definir quais atividades do CGC ele acompanha.
               </p>
             </div>
@@ -597,13 +597,13 @@ function AtividadesCgcPage() {
                           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                             <div>
                               <div style={{ color: "#E8EAF0", fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{total}</div>
-                              <div style={{ color: "#7A82A0", fontSize: 10, marginTop: 3 }}>
+                              <div style={{ color: "#E8EAF0", fontSize: 10, marginTop: 3 }}>
                                 {total === 1 ? "atividade solicitada" : "atividades solicitadas"}
                               </div>
                             </div>
                             <div>
                               <div style={{ color: "#34D399", fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{concluded}</div>
-                              <div style={{ color: "#7A82A0", fontSize: 10, marginTop: 3 }}>
+                              <div style={{ color: "#E8EAF0", fontSize: 10, marginTop: 3 }}>
                                 {concluded === 1 ? "atividade concluída" : "atividades concluídas"}
                               </div>
                             </div>
@@ -667,7 +667,7 @@ function AtividadesCgcPage() {
                 fontSize: 13, outline: "none"
               }}
             />
-            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#4A5270" }} />
+            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#E8EAF0" }} />
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {["TODOS", "NAO_INICIADO", "EM_ANDAMENTO", "CONCLUIDO"].map((value) => {
@@ -681,7 +681,7 @@ function AtividadesCgcPage() {
                     padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 500,
                     border: `1px solid ${isActive ? (option?.color || "#3B6EF5") : "#2A3045"}`,
                     background: isActive ? (option ? `${option.color}20` : "#3B6EF520") : "transparent",
-                    color: isActive ? (option?.color || "#3B6EF5") : "#7A82A0",
+                    color: isActive ? (option?.color || "#3B6EF5") : "#E8EAF0",
                     cursor: "pointer", transition: "all 0.15s"
                   }}
                 >
@@ -697,7 +697,7 @@ function AtividadesCgcPage() {
             <h2 style={{ color: "#F87171", fontSize: 16, fontWeight: 600, margin: "0 0 8px" }}>
               Não foi possível carregar as atividades
             </h2>
-            <p style={{ color: "#7A82A0", fontSize: 13, margin: "0 0 16px", lineHeight: 1.6 }}>{apiError}</p>
+            <p style={{ color: "#E8EAF0", fontSize: 13, margin: "0 0 16px", lineHeight: 1.6 }}>{apiError}</p>
             <button
               onClick={() => fetchActivities({ showIndicator: true })}
               disabled={refreshing}
@@ -713,7 +713,7 @@ function AtividadesCgcPage() {
             <h2 style={{ color: "#F59E0B", fontSize: 16, fontWeight: 600, margin: "0 0 8px" }}>
               Grupo não configurado
             </h2>
-            <p style={{ color: "#7A82A0", fontSize: 13, margin: 0, lineHeight: 1.6 }}>
+            <p style={{ color: "#E8EAF0", fontSize: 13, margin: 0, lineHeight: 1.6 }}>
               Este grupo ainda não tem canal nem valor identificador. Sem isso ele listaria todas as
               atividades do provider, então nenhuma consulta é feita. Edite o grupo para definir o recorte.
             </p>
@@ -731,7 +731,7 @@ function AtividadesCgcPage() {
         )}
 
         {skipped > 0 && !apiError && (
-          <p style={{ color: "#4A5270", fontSize: 12, marginBottom: 12 }}>
+          <p style={{ color: "#E8EAF0", fontSize: 12, marginBottom: 12 }}>
             {skipped === 1 ? "1 atividade não pôde" : `${skipped} atividades não puderam`} ser exibida
             {skipped === 1 ? "" : "s"}.
           </p>
@@ -740,7 +740,7 @@ function AtividadesCgcPage() {
         {/* Lista */}
         {!apiError && !unconfigured && Object.keys(grouped).length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 24px", background: "#181C27", borderRadius: 12, border: "1px solid #2A3045" }}>
-            <p style={{ color: "#7A82A0", fontSize: 15 }}>Nenhuma atividade encontrada</p>
+            <p style={{ color: "#E8EAF0", fontSize: 15 }}>Nenhuma atividade encontrada</p>
           </div>
         ) : (
           Object.entries(grouped).map(([category, items]) => {
@@ -759,7 +759,7 @@ function AtividadesCgcPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                       <div style={{ width: 3, height: 18, background: catColor, borderRadius: 2 }} />
                       <span style={{ color: "#E8EAF0", fontWeight: 600, fontSize: 14 }}>{category}</span>
-                      <span style={{ color: "#4A5270", fontSize: 12 }}>({items.length})</span>
+                      <span style={{ color: "#E8EAF0", fontSize: 12 }}>({items.length})</span>
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <span style={{ color: "#34D399", fontSize: 12 }}>{catStats.done}/{catStats.total}</span>
@@ -795,7 +795,7 @@ function AtividadesCgcPage() {
                         <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
                           <div style={{ flex: 1, minWidth: 200 }}>
                             <p style={{
-                              color: activity.incomplete ? "#4A5270" : "#C8CAD6",
+                              color: activity.incomplete ? "#E8EAF0" : "#E8EAF0",
                               fontSize: 13, margin: 0, lineHeight: 1.5,
                               fontStyle: activity.incomplete ? "italic" : "normal"
                             }}>
@@ -820,10 +820,10 @@ function AtividadesCgcPage() {
                                   <div style={{ display: "grid", gap: 4, marginTop: 8 }}>
                                     {activity.fields.map((field) => (
                                       <div key={`${activity.id}-${field.name ?? field.title}`} className="field-row">
-                                        <span style={{ color: "#4A5270", fontSize: 11, fontWeight: 500, wordBreak: "break-word" }}>
+                                        <span style={{ color: "#E8EAF0", fontSize: 11, fontWeight: 500, wordBreak: "break-word" }}>
                                           {field.title || field.name}
                                         </span>
-                                        <span style={{ color: "#C8CAD6", fontSize: 12, lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                        <span style={{ color: "#E8EAF0", fontSize: 12, lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                                           {field.value}
                                         </span>
                                       </div>
@@ -835,7 +835,7 @@ function AtividadesCgcPage() {
 
                             {(observationsByActivity[activity.id] || []).map((note) => (
                               <div key={note.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, marginTop: 4 }}>
-                                <p style={{ color: "#4A5270", fontSize: 12, margin: 0, fontStyle: "italic", flex: 1, minWidth: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.5, display: "flex", alignItems: "flex-start", gap: 5 }}>
+                                <p style={{ color: "#E8EAF0", fontSize: 12, margin: 0, fontStyle: "italic", flex: 1, minWidth: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.5, display: "flex", alignItems: "flex-start", gap: 5 }}>
                                   <MessageSquare size={12} style={{ flexShrink: 0, marginTop: 2 }} /> {note.text}
                                 </p>
                                 <button
@@ -868,13 +868,13 @@ function AtividadesCgcPage() {
                               <span style={{
                                 fontSize: 11, borderRadius: 4, padding: "2px 8px",
                                 background: overdue ? "#2A1A1A" : "#1E2333",
-                                color: overdue ? "#F87171" : deadlineLabel ? "#C8CAD6" : "#4A5270",
+                                color: overdue ? "#F87171" : deadlineLabel ? "#E8EAF0" : "#E8EAF0",
                                 border: `1px solid ${overdue ? "#DC2626" : "#2A3045"}`
                               }}>
                                 {deadlineLabel ? `Prazo: ${deadlineLabel}` : "Sem prazo"}
                               </span>
                               {activity.contact && (
-                                <span style={{ fontSize: 11, color: "#4A5270" }}>{activity.contact}</span>
+                                <span style={{ fontSize: 11, color: "#E8EAF0" }}>{activity.contact}</span>
                               )}
                             </div>
                           </div>
@@ -908,7 +908,7 @@ function AtividadesCgcPage() {
                               style={{
                                 background: "transparent", border: "1px solid #2A3045",
                                 borderRadius: 6, padding: "5px 8px", cursor: "pointer", display: "flex",
-                                color: (observationsByActivity[activity.id] || []).length > 0 ? "#60A5FA" : "#4A5270"
+                                color: (observationsByActivity[activity.id] || []).length > 0 ? "#60A5FA" : "#E8EAF0"
                               }}
                             >
                               <MessageSquare size={14} />
@@ -939,19 +939,19 @@ function AtividadesCgcPage() {
               onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
               disabled={page === 1 || refreshing}
               style={{
-                background: "transparent", border: "1px solid #2A3045", color: page === 1 ? "#4A5270" : "#C8CAD6",
+                background: "transparent", border: "1px solid #2A3045", color: page === 1 ? "#E8EAF0" : "#E8EAF0",
                 borderRadius: 6, padding: "8px 14px", fontSize: 13,
                 cursor: page === 1 || refreshing ? "not-allowed" : "pointer"
               }}
             >
               Anterior
             </button>
-            <span style={{ color: "#7A82A0", fontSize: 13 }}>Página {page}</span>
+            <span style={{ color: "#E8EAF0", fontSize: 13 }}>Página {page}</span>
             <button
               onClick={() => setPage((prev) => prev + 1)}
               disabled={!hasMore || refreshing}
               style={{
-                background: "transparent", border: "1px solid #2A3045", color: hasMore ? "#C8CAD6" : "#4A5270",
+                background: "transparent", border: "1px solid #2A3045", color: hasMore ? "#E8EAF0" : "#E8EAF0",
                 borderRadius: 6, padding: "8px 14px", fontSize: 13,
                 cursor: !hasMore || refreshing ? "not-allowed" : "pointer"
               }}
@@ -978,7 +978,7 @@ function AtividadesCgcPage() {
             <h3 style={{ color: "#E8EAF0", fontSize: 16, fontWeight: 600, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
               <MessageSquare size={16} /> {editingNoteId ? "Editar comentário" : "Novo comentário"}
             </h3>
-            <p style={{ color: "#7A82A0", fontSize: 12, margin: "0 0 16px" }}>
+            <p style={{ color: "#E8EAF0", fontSize: 12, margin: "0 0 16px" }}>
               Visível só nesta tela, junto do histórico da atividade.
             </p>
             <textarea
@@ -997,7 +997,7 @@ function AtividadesCgcPage() {
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16, flexWrap: "wrap" }}>
               <button
                 onClick={closeObsModal}
-                style={{ background: "transparent", border: "none", padding: 8, color: "#7A82A0", fontSize: 13, cursor: "pointer" }}
+                style={{ background: "transparent", border: "none", padding: 8, color: "#E8EAF0", fontSize: 13, cursor: "pointer" }}
               >
                 Cancelar
               </button>
