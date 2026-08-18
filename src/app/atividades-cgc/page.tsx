@@ -565,11 +565,11 @@ function AtividadesCgcPage() {
                     className="split-card"
                     style={{
                       background: "#181C27", border: "1px solid #2A3045", borderRadius: 10,
-                      padding: 12, borderLeft: `4px solid ${color}`
+                      padding: 12
                     }}
                   >
                     <div style={{ minWidth: 0 }}>
-                      <h2 style={{ margin: 0, fontSize: 14, color: "#E8EAF0" }}>{item.name}</h2>
+                      <h2 style={{ margin: 0, fontSize: 14, color }}>{item.name}</h2>
                       {!configured ? (
                         <p style={{ margin: "6px 0 0", color: "#F59E0B", fontSize: 12 }}>
                           Grupo ainda não configurado
