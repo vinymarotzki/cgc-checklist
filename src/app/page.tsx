@@ -300,17 +300,6 @@ function ChecklistPage() {
           <div />
           <div className="app-nav">
             <Link
-              href="/history"
-              style={{
-                color: "#E8EAF0", fontSize: 13, textDecoration: "none",
-                display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
-                padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
-                transition: "all 0.15s"
-              }}
-            >
-              <History size={14} /> Histórico
-            </Link>
-            <Link
               href="/checklists"
               style={{
                 color: "#E8EAF0", fontSize: 13, textDecoration: "none",
@@ -320,6 +309,17 @@ function ChecklistPage() {
               }}
             >
               <ArrowLeft size={14} /> Voltar
+            </Link>
+            <Link
+              href="/history"
+              style={{
+                color: "#E8EAF0", fontSize: 13, textDecoration: "none",
+                display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
+                padding: "6px 12px", borderRadius: 6, border: "1px solid #2A3045",
+                transition: "all 0.15s"
+              }}
+            >
+              <History size={14} /> Histórico
             </Link>
             <Link
               href={`/admin?checklist=${encodeURIComponent(checklistId)}`}
