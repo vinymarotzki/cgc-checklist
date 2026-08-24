@@ -8,26 +8,6 @@
 import type { ChecklistStatus } from "@/lib/checklist-status";
 
 /**
- * Nível de prioridade, usado para cor e ordenação.
- *
- * OUTRA cobre um valor preenchido que não se encaixa na escala conhecida — o
- * rótulo original continua sendo exibido em vez de ser descartado.
- */
-export type CgcPriorityLevel = "ALTA" | "MEDIA" | "BAIXA" | "OUTRA" | "SEM_PRIORIDADE";
-
-/**
- * Prioridade da atividade.
- *
- * Vem do campo `prioridades` do formulário (Alta/Média/Baixa). O `raw.priority`
- * do contrato é apenas um booleano de destaque e serve só como reserva.
- */
-export interface CgcPriority {
-  level: CgcPriorityLevel;
-  /** Texto como veio da API, ex.: "Alta". */
-  label: string;
-}
-
-/**
  * Prazo da atividade.
  *
  * Não existe campo de prazo no contrato da API. O valor é extraído do primeiro
@@ -79,7 +59,6 @@ export interface CgcActivity {
   messageId: number | null;
   /** Grupo responsável (grupo local selecionado, com fallback para o time da API). */
   group: string | null;
-  priority: CgcPriority;
   deadline: CgcDeadline | null;
   description: string;
   /** Campos preenchidos da mensagem, lidos do `formattedValue`. */

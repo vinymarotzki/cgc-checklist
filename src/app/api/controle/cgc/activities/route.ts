@@ -6,7 +6,7 @@
  * não tem sasi-token nenhum.
  *
  * As atividades concluídas (quais message_id, quem concluiu, quando) vêm de
- * cgc_activity_status, que é local. Descrição/prioridade/prazo só existem na
+ * cgc_activity_status, que é local. Descrição/prazo só existem na
  * API SASI, então o grupo é varrido (mesmo limite SASI_CGC_SCAN_CAP de
  * /api/cgc/activities) para montar esses campos; uma concluída que caia fora
  * do teto de varredura ainda aparece na planilha, só sem esses detalhes.
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
 
   const baseQuery = groupToMessagesQuery(group);
   const fieldRule = groupToFieldRule(group);
-  const detailsByMessageId = new Map<string, { description: string; priority: string; deadline: string | null }>();
+  const detailsByMessageId = new Map<string, { description: string; deadline: string | null }>();
 
   try {
     let scanned = 0;
@@ -101,7 +101,6 @@ export async function GET(req: NextRequest) {
       for (const activity of activities) {
         detailsByMessageId.set(activity.id, {
           description: activity.description,
-          priority: activity.priority.label,
           deadline: activity.deadline?.label ?? null,
         });
       }
@@ -122,7 +121,6 @@ export async function GET(req: NextRequest) {
     return {
       id: row.message_id,
       description: details?.description ?? "—",
-      priority: details?.priority ?? "—",
       deadline: details?.deadline ?? null,
       comments: (commentsByMessage.get(row.message_id) ?? []).join(" | "),
       responsible: row.user_name ?? "—",

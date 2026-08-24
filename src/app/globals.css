@@ -11,9 +11,9 @@
   --border: #2A3045;
   --accent: #3B6EF5;
   --accent-dim: #2A4FA8;
-  --muted: #4A5270;
+  --muted: #E8EAF0;
   --text: #E8EAF0;
-  --text-muted: #7A82A0;
+  --text-muted: #E8EAF0;
 }
 
 * {
@@ -798,6 +798,227 @@ select option {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/* Rótulo de texto ao lado do ícone num botão de ação de card — só em telas
+   largas o suficiente pra caber sem apertar. Usada em vários botões
+   (checklists, atividades do CGC, controle); definida uma vez só aqui. */
+.btn-label-desktop {
+  display: inline;
+}
+
+@media (max-width: 768px) {
+  .btn-label-desktop {
+    display: none;
+  }
+}
+
+/* Botão de comentário de cada atividade do CGC. Alvo de clique pequeno e sem
+   hover antes fazia o botão parecer decorativo em vez de interativo. Quando a
+   atividade já tem comentário o botão fica destacado em repouso (não só no
+   hover), pra ficar óbvio que há algo pra ler ali. */
+.cgc-comment-button {
+  position: relative;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: #E8EAF0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.cgc-comment-button:hover {
+  background: rgba(59, 110, 245, 0.14);
+  border-color: var(--accent);
+  color: #60A5FA;
+}
+
+.cgc-comment-button[data-has-notes="true"] {
+  color: #60A5FA;
+  background: rgba(59, 110, 245, 0.12);
+  border-color: var(--accent-dim);
+}
+
+.cgc-comment-button[data-has-notes="true"]:hover {
+  background: rgba(59, 110, 245, 0.22);
+  border-color: var(--accent);
+}
+
+.cgc-comment-badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  border: 2px solid var(--surface);
+}
+
+/* Linha com os toggles de "detalhes" e "comentários" de uma atividade do CGC.
+   Os dois usam o mesmo estilo de link discreto (.cgc-section-toggle) — antes
+   comentários ficavam sempre abertos, empurrando a lista inteira pra baixo em
+   atividades com várias notas; agora ficam escondidos até o usuário pedir. */
+.cgc-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.cgc-section-toggle {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #60A5FA;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease;
+}
+
+.cgc-section-toggle:hover {
+  color: #8FBBFA;
+}
+
+/* Comentários de uma atividade do CGC, em formato de bolha (avatar + autor +
+   hora + texto): antes eram parágrafos soltos sem autor nem data, difícil de
+   distinguir um comentário do outro. As ações de editar/apagar ficam sempre
+   visíveis (não só no hover) pra funcionar igual em telas touch. */
+.cgc-notes-box {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.cgc-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.cgc-note + .cgc-note {
+  border-top: 1px solid var(--border);
+}
+
+.cgc-note-avatar {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cgc-note-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.cgc-note-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cgc-note-author {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cgc-note-time {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.cgc-note-text {
+  color: #E8EAF0;
+  font-size: 13px;
+  margin: 3px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
+}
+
+.cgc-note-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.cgc-note-action {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.cgc-note-action:hover {
+  background: rgba(96, 165, 250, 0.15);
+  color: #60A5FA;
+}
+
+.cgc-note-action-danger:hover {
+  background: rgba(248, 113, 113, 0.15);
+  color: #F87171;
+}
+
+/* Tablet: um pouco mais de respiro entre bolhas de comentário. */
+@media (max-width: 1024px) {
+  .cgc-note {
+    padding: 10px;
+  }
+}
+
+/* Mobile: telas estreitas ganham mais espaço tirando o avatar do caminho e
+   deixando nome/hora quebrarem linha em vez de espremer o texto. */
+@media (max-width: 480px) {
+  .cgc-note-avatar {
+    display: none;
+  }
+
+  .cgc-note {
+    padding: 9px 10px;
+    gap: 0;
+  }
+
+  .cgc-note-head {
+    gap: 6px;
+  }
+
+  /* Alvo de toque maior pro botão de comentário nesse tamanho de tela. */
+  .cgc-comment-button {
+    padding: 8px 12px;
+  }
 }
 
 /* Duas colunas que viram uma só quando a tela aperta. */
