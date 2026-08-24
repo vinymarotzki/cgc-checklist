@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
 import { STATUS_LABELS, getStatusColor, getStatusPillStyle } from "@/lib/checklist-status";
+import { getCgcGroupColor } from "@/lib/cgc/colors";
 import {
   Lock, ArrowLeft, History, MessageSquare, Pencil, Trash2, RefreshCw,
   FileText, ChevronDown, ChevronUp, User, type LucideIcon,
@@ -46,6 +47,13 @@ function getObservationEvent(observation: string | null) {
   if (!observation) return null;
   return OBSERVATION_EVENTS.find((event) => observation.startsWith(event.prefix)) || null;
 }
+
+/**
+ * Intervalo de sincronização automática, mesmo valor de /atividades-cgc — sem
+ * isso os cards (concluídas por grupo, contadores) só atualizavam com reload
+ * manual da página, ao contrário da listagem principal.
+ */
+const REFRESH_INTERVAL_MS = 15000;
 
 /** Rótulo, cor e texto de um evento do histórico, seja status ou comentário. */
 function describeEntry(entry: CgcHistoryEntry) {
@@ -169,6 +177,20 @@ function CgcHistoryPage() {
 
   useEffect(() => {
     fetchHistory();
+
+    const timer = setInterval(fetchHistory, REFRESH_INTERVAL_MS);
+    // Voltar para a aba é o momento em que o usuário mais espera ver o novo.
+    const syncOnReturn = () => {
+      if (document.visibilityState === "visible") fetchHistory();
+    };
+    window.addEventListener("focus", syncOnReturn);
+    document.addEventListener("visibilitychange", syncOnReturn);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", syncOnReturn);
+      document.removeEventListener("visibilitychange", syncOnReturn);
+    };
   }, [fetchHistory]);
 
   const activityGroups = useMemo(() => groupByActivity(history), [history]);
@@ -281,8 +303,13 @@ function CgcHistoryPage() {
                 return (
                   <div key={group.id} className="history-completion-card">
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div className="history-completion-user">{group.name}</div>
-                      <div className="history-completion-meta">
+                      <span style={{
+                        display: "inline-block", background: getCgcGroupColor(group.name), color: "#FFFFFF",
+                        fontSize: 13, fontWeight: 800, padding: "4px 12px", borderRadius: 6
+                      }}>
+                        {group.name}
+                      </span>
+                      <div className="history-completion-meta" style={{ marginTop: 8 }}>
                         {group.concluded === 1 ? "1 atividade concluída" : `${group.concluded} atividades concluídas`}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
