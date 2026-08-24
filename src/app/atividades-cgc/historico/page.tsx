@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
 import { STATUS_LABELS, getStatusColor, getStatusPillStyle } from "@/lib/checklist-status";
+import { getCgcGroupColor } from "@/lib/cgc/colors";
 import {
   Lock, ArrowLeft, History, MessageSquare, Pencil, Trash2, RefreshCw,
   FileText, ChevronDown, ChevronUp, User, type LucideIcon,
@@ -281,8 +282,13 @@ function CgcHistoryPage() {
                 return (
                   <div key={group.id} className="history-completion-card">
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div className="history-completion-user">{group.name}</div>
-                      <div className="history-completion-meta">
+                      <span style={{
+                        display: "inline-block", background: getCgcGroupColor(group.name), color: "#FFFFFF",
+                        fontSize: 13, fontWeight: 800, padding: "4px 12px", borderRadius: 6
+                      }}>
+                        {group.name}
+                      </span>
+                      <div className="history-completion-meta" style={{ marginTop: 8 }}>
                         {group.concluded === 1 ? "1 atividade concluída" : `${group.concluded} atividades concluídas`}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
