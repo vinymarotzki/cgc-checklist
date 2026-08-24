@@ -185,20 +185,32 @@ export async function syncGroupMessages(group: CgcGroup, token: string): Promise
       // vez de uma de cada vez corta a espera de ~5x a latência da API SASI
       // pra ~1x, que é o motivo da lista demorar tanto pra aparecer na
       // primeira visita a um grupo.
+      // allSettled em vez de all: a API SASI responde 500 (em vez de array
+      // vazio) pra página além do fim dos dados — muito comum aqui, já que a
+      // maioria dos grupos cabe inteira numa página só. Com Promise.all, essa
+      // rejeição abortava o Promise.all inteiro (silenciada pelo catch de
+      // SasiApiError lá embaixo) e o cache nunca chegava a ser gravado.
       const maxPages = Math.ceil(SCAN_CAP / SASI_MESSAGES_MAX_LIMIT);
       for (let start = 1; start <= maxPages; start += COLD_SCAN_CONCURRENCY) {
         const pages = Array.from(
           { length: Math.min(COLD_SCAN_CONCURRENCY, maxPages - start + 1) },
           (_, i) => start + i
         );
-        const batches = await Promise.all(
+        const settled = await Promise.allSettled(
           pages.map((page) =>
             fetchProviderMessages({ ...baseQuery, page, limit: SASI_MESSAGES_MAX_LIMIT }, { token })
           )
         );
 
         let sawEmptyPage = false;
-        for (const batch of batches) {
+        for (const outcome of settled) {
+          if (outcome.status === "rejected") {
+            if (!(outcome.reason instanceof SasiApiError)) throw outcome.reason;
+            // Trata como "fim dos dados", não como falha real.
+            sawEmptyPage = true;
+            continue;
+          }
+          const batch = outcome.value;
           if (batch.length === 0) {
             sawEmptyPage = true;
             continue;
