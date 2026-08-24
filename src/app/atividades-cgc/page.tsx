@@ -517,9 +517,18 @@ function AtividadesCgcPage() {
               <ArrowLeft size={14} /> Grupos
             </Link>
           )}
-          <span style={{ color: "#E8EAF0", fontSize: 15, fontWeight: 600, whiteSpace: "nowrap" }}>
-            {groupId ? (group?.name || "Atividades da CGC") : "Atividades da CGC"}
-          </span>
+          {groupId && group?.name ? (
+            <span style={{
+              display: "inline-block", background: getCgcGroupColor(group.name), color: "#FFFFFF",
+              fontSize: 13, fontWeight: 800, padding: "4px 12px", borderRadius: 6, whiteSpace: "nowrap"
+            }}>
+              {group.name}
+            </span>
+          ) : (
+            <span style={{ color: "#E8EAF0", fontSize: 15, fontWeight: 600, whiteSpace: "nowrap" }}>
+              Atividades da CGC
+            </span>
+          )}
         </div>
         <div className="app-nav">
           <Link
