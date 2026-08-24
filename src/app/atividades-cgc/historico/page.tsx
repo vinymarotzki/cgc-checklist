@@ -48,6 +48,13 @@ function getObservationEvent(observation: string | null) {
 }
 
 /** Rótulo, cor e texto de um evento do histórico, seja status ou comentário. */
+/**
+ * Intervalo de sincronização automática, mesmo valor de /atividades-cgc — sem
+ * isso os cards (concluídas por grupo, contadores) só atualizavam com reload
+ * manual da página, ao contrário da listagem principal.
+ */
+const REFRESH_INTERVAL_MS = 15000;
+
 function describeEntry(entry: CgcHistoryEntry) {
   const event = getObservationEvent(entry.observation);
   const text = event
@@ -169,6 +176,20 @@ function CgcHistoryPage() {
 
   useEffect(() => {
     fetchHistory();
+
+    const timer = setInterval(fetchHistory, REFRESH_INTERVAL_MS);
+    // Voltar para a aba é o momento em que o usuário mais espera ver o novo.
+    const syncOnReturn = () => {
+      if (document.visibilityState === "visible") fetchHistory();
+    };
+    window.addEventListener("focus", syncOnReturn);
+    document.addEventListener("visibilitychange", syncOnReturn);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", syncOnReturn);
+      document.removeEventListener("visibilitychange", syncOnReturn);
+    };
   }, [fetchHistory]);
 
   const activityGroups = useMemo(() => groupByActivity(history), [history]);
