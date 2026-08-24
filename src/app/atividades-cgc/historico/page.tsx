@@ -48,7 +48,6 @@ function getObservationEvent(observation: string | null) {
   return OBSERVATION_EVENTS.find((event) => observation.startsWith(event.prefix)) || null;
 }
 
-/** Rótulo, cor e texto de um evento do histórico, seja status ou comentário. */
 /**
  * Intervalo de sincronização automática, mesmo valor de /atividades-cgc — sem
  * isso os cards (concluídas por grupo, contadores) só atualizavam com reload
@@ -56,6 +55,7 @@ function getObservationEvent(observation: string | null) {
  */
 const REFRESH_INTERVAL_MS = 15000;
 
+/** Rótulo, cor e texto de um evento do histórico, seja status ou comentário. */
 function describeEntry(entry: CgcHistoryEntry) {
   const event = getObservationEvent(entry.observation);
   const text = event
