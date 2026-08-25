@@ -43,6 +43,19 @@ const TABLES = [
 
 async function migrateTable(table) {
   const { rows, columns } = await source.execute(`SELECT * FROM ${table}`);
+
+  // cgc_groups e cgc_group_totals são caso especial: ensureDefaultGroups()
+  // (chamada em toda leitura) já pode ter inserido os 4 grupos padrão no
+  // destino com uuidv4() novos, diferentes dos ids de produção. INSERT OR
+  // REPLACE só bate por PK `id`, então as linhas de origem (ids diferentes,
+  // mesmos nomes) entrariam JUNTO das auto-criadas em vez de substituí-las —
+  // 8 grupos em vez de 4, com cgc_group_totals órfã sobrando. Essas duas
+  // tabelas são inteiramente donas da origem (diferente das outras, que são
+  // seguras de mesclar), então limpamos o destino antes de inserir.
+  if (!dryRun && (table === "cgc_groups" || table === "cgc_group_totals")) {
+    await dest.execute(`DELETE FROM ${table}`);
+  }
+
   if (rows.length === 0) {
     console.log(`${table}: 0 linhas na origem, nada a copiar.`);
     return { table, source: 0, dest: 0 };
