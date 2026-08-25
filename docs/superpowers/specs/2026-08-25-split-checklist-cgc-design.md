@@ -54,8 +54,10 @@ sistema sem afetar o outro (ex.: mexer no CGC sem derrubar o Checklist).
   movidas `/api/controle/cgc`, `/api/controle/cgc/activities` (mesmo
   contrato de resposta, continuam públicas, sem sasi-token).
 - Código: `src/lib/cgc/**`, `src/lib/sasi-api/**`.
-- Tabelas: `cgc_groups`, `cgc_activity_status`, `cgc_history`,
-  `cgc_observations`, `cgc_group_totals`.
+- Tabelas (7, confirmado lendo `src/lib/db.ts` — o CLAUDE.md original só
+  listava 5): `cgc_groups`, `cgc_activity_status`, `cgc_history`,
+  `cgc_observations`, `cgc_group_totals`, `cgc_message_cache`,
+  `cgc_message_cache_sync`.
 - Banco Turso: novo, criado especificamente para este repo.
 
 ## Código duplicado (não compartilhado via pacote)
@@ -130,10 +132,10 @@ Banco Turso atual tem os dados `cgc_*` de produção — precisam ser copiados
 pro banco novo, não recriados do zero.
 
 1. Criar banco Turso novo para o `sasi-cgc`.
-2. Script de migração (roda uma vez): lê `cgc_groups`,
+2. Script de migração (roda uma vez): lê as 7 tabelas `cgc_*` (`cgc_groups`,
    `cgc_activity_status`, `cgc_history`, `cgc_observations`,
-   `cgc_group_totals` do banco atual e grava no banco novo, preservando
-   IDs e timestamps.
+   `cgc_group_totals`, `cgc_message_cache`, `cgc_message_cache_sync`) do
+   banco atual e grava no banco novo, preservando IDs e timestamps.
 3. Validar contagens (linha a linha ou por `COUNT(*)` por tabela) batendo
    entre origem e destino antes de considerar a migração concluída.
 4. Só depois dos dois sistemas rodando de forma independente e validados
