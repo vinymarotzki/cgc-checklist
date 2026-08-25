@@ -1,7 +1,8 @@
 /**
  * Atividades concluídas de um grupo do CGC, para exportar XLSX em /controle.
  *
- * Proxy pro sasi-cgc — ver src/app/api/controle/cgc/route.ts.
+ * Proxy pro sasi-cgc — ver src/app/api/controle/cgc/route.ts, inclusive o
+ * header x-controle-secret (CONTROLE_PROXY_SECRET) que autentica a chamada.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -11,6 +12,14 @@ export async function GET(req: NextRequest) {
   if (!cgcAppUrl) {
     return NextResponse.json(
       { error: "CGC_APP_URL não configurada no servidor." },
+      { status: 500 }
+    );
+  }
+
+  const controleProxySecret = process.env.CONTROLE_PROXY_SECRET;
+  if (!controleProxySecret) {
+    return NextResponse.json(
+      { error: "CONTROLE_PROXY_SECRET não configurada no servidor." },
       { status: 500 }
     );
   }
@@ -27,7 +36,11 @@ export async function GET(req: NextRequest) {
     // um sasi-cgc lento (ex: no meio de um scan contra a API SASI, não
     // necessariamente fora do ar) deixa a requisição pendurada em vez de
     // degradar pro erro 502 abaixo.
-    const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(15000) });
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: { "x-controle-secret": controleProxySecret },
+      signal: AbortSignal.timeout(15000),
+    });
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch {
