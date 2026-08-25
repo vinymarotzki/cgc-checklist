@@ -23,7 +23,11 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL("/api/controle/cgc/activities", cgcAppUrl);
     url.searchParams.set("group", groupId);
-    const response = await fetch(url, { cache: "no-store" });
+    // Mesmo timeout de SASI_API_TIMEOUT_MS (client.ts do sasi-cgc): sem isso,
+    // um sasi-cgc lento (ex: no meio de um scan contra a API SASI, não
+    // necessariamente fora do ar) deixa a requisição pendurada em vez de
+    // degradar pro erro 502 abaixo.
+    const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(15000) });
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch {
