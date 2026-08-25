@@ -43,11 +43,11 @@ special tracing/root override needed now that there is a single copy of the app.
 
 This repo used to hold two independent products (Checklist + Atividades do CGC). The
 CGC product — routes, API, `cgc_*` tables, the whole `src/lib/sasi-api/` and
-`src/lib/cgc/` integration layer — was split out into a sibling repo, `sasi-cgc`
-(`../sasi-cgc`), with its own Turso database. What stays here is the Checklist
+`src/lib/cgc/` integration layer — was split out into a sibling repo, `cgc-atividades`
+(`../cgc-atividades`), with its own Turso database. What stays here is the Checklist
 product plus a small read-only proxy that lets `/controle` show CGC data without
-this app talking to the SASI API or the CGC database directly. See `sasi-cgc`'s own
-`CLAUDE.md` for that product's conventions — they mostly mirror this file's Auth,
+this app talking to the SASI API or the CGC database directly. See `cgc-atividades`'s
+own `CLAUDE.md` for that product's conventions — they mostly mirror this file's Auth,
 Status vocabulary, Styling and Git workflow sections, since both repos started as
 one codebase.
 
@@ -61,18 +61,18 @@ Every page is a client component (`"use client"`) that fetches its own `/api/...
 route. No server components fetch data, and no page talks to an external API
 directly.
 
-### `/controle` — cross-product proxy to sasi-cgc
+### `/controle` — cross-product proxy to cgc-atividades
 
 `/controle` reports on completed activities across both products, but this repo no
-longer has local access to CGC data. Instead, two routes proxy to the sasi-cgc app
-over HTTP: `/api/controle/cgc` (summary by group) and `/api/controle/cgc/activities`
+longer has local access to CGC data. Instead, two routes proxy to the cgc-atividades
+app over HTTP: `/api/controle/cgc` (summary by group) and `/api/controle/cgc/activities`
 (completed activities for one group, for XLSX export) both read `CGC_APP_URL` — a
 server-only env var, never exposed to the browser — and forward to the matching
-`/api/controle/cgc*` route on the sasi-cgc side, which does have the real data.
+`/api/controle/cgc*` route on the cgc-atividades side, which does have the real data.
 Both fetches carry a 15s timeout (`AbortSignal.timeout`, matching the
-`SASI_API_TIMEOUT_MS` default sasi-cgc uses for its own external calls) so a slow
-sasi-cgc degrades to a clean 502 instead of hanging the request. The local Docker
-`dev` profile overrides `CGC_APP_URL` to reach the sasi-cgc container via
+`SASI_API_TIMEOUT_MS` default cgc-atividades uses for its own external calls) so a
+slow cgc-atividades degrades to a clean 502 instead of hanging the request. The local
+Docker `dev` profile overrides `CGC_APP_URL` to reach the cgc-atividades container via
 `host.docker.internal` — see the comment in `docker-compose.yml` and `.env.example`
 before assuming an edited `.env.local` isn't taking effect.
 
@@ -109,9 +109,9 @@ environment.
 (`/api/activities`, `/api/checklists`, `/api/observations`, `/api/history`), all
 reading the token through `readSasiTokenHeader` (never from the URL) so the rule
 above cannot drift between them. (The shared `src/lib/api-auth.ts` — which also
-returned the raw token to forward as a Bearer to the SASI API — moved to sasi-cgc
-along with the CGC routes that needed it; nothing in this repo talks to the SASI
-API anymore.)
+returned the raw token to forward as a Bearer to the SASI API — moved to
+cgc-atividades along with the CGC routes that needed it; nothing in this repo talks
+to the SASI API anymore.)
 
 ### Database
 
@@ -122,14 +122,14 @@ wrapped in `try/catch` (a thrown "duplicate column" is the "already migrated" si
 
 Tables: `checklists`, `activities`, `history`, `observations`, `completed_checklists`,
 `completed_checklist_items`. (The `cgc_*` tables moved with the CGC product to
-sasi-cgc's own database — this database no longer has them.)
+cgc-atividades's own database — this database no longer has them.)
 
 ### Status vocabulary
 
 `src/lib/checklist-status.ts` is the single source for statuses and their colors:
 `SEM_STATUS`, `NAO_INICIADO`, `EM_ANDAMENTO`, `CONCLUIDO`, `IMPEDIDO` (only the middle
 three are offered in the selector). Reuse it rather than defining a parallel palette.
-sasi-cgc keeps its own copy of this file plus a group-color layer on top
+cgc-atividades keeps its own copy of this file plus a group-color layer on top
 (`src/lib/cgc/colors.ts` there) — the vocabulary itself is meant to stay identical
 between the two repos even though they no longer share code.
 

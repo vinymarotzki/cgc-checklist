@@ -1,7 +1,7 @@
 // scripts/migrate-cgc-data.mjs
 //
 // Copia as tabelas cgc_* do banco Turso de origem (checklist, hoje com
-// tudo junto) pro banco Turso de destino (sasi-cgc, novo). Idempotente:
+// tudo junto) pro banco Turso de destino (cgc-atividades, novo). Idempotente:
 // usa INSERT OR REPLACE, então pode rodar de novo sem duplicar linhas.
 //
 // Uso:

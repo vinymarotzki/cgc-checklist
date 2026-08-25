@@ -1,14 +1,14 @@
 /**
  * Resumo de atividades concluídas do CGC por grupo, para a página /controle.
  *
- * Proxy pro sasi-cgc: desde a separação em dois sistemas, os dados do CGC
- * não vivem mais neste banco. CGC_APP_URL é server-only, nunca exposta ao
- * navegador — o front-end de /controle continua chamando esta rota local,
- * sem saber que ela virou um repasse.
+ * Proxy pro cgc-atividades: desde a separação em dois sistemas, os dados do
+ * CGC não vivem mais neste banco. CGC_APP_URL é server-only, nunca exposta
+ * ao navegador — o front-end de /controle continua chamando esta rota
+ * local, sem saber que ela virou um repasse.
  *
- * A rota real no sasi-cgc virou alcançável pela rede (antes era o mesmo
- * processo), então autentica com CONTROLE_PROXY_SECRET no header
- * x-controle-secret — sem ele o sasi-cgc responde 401.
+ * A rota real no cgc-atividades virou alcançável pela rede (antes era o
+ * mesmo processo), então autentica com CONTROLE_PROXY_SECRET no header
+ * x-controle-secret — sem ele o cgc-atividades responde 401.
  */
 
 import { NextResponse } from "next/server";
@@ -34,10 +34,10 @@ export async function GET() {
     const response = await fetch(`${cgcAppUrl}/api/controle/cgc`, {
       cache: "no-store",
       headers: { "x-controle-secret": controleProxySecret },
-      // Mesmo timeout de SASI_API_TIMEOUT_MS (client.ts do sasi-cgc): sem
-      // isso, um sasi-cgc lento (ex: no meio de um scan contra a API SASI,
-      // não necessariamente fora do ar) deixa a requisição pendurada em vez
-      // de degradar pro erro 502 abaixo.
+      // Mesmo timeout de SASI_API_TIMEOUT_MS (client.ts do cgc-atividades):
+      // sem isso, um cgc-atividades lento (ex: no meio de um scan contra a
+      // API SASI, não necessariamente fora do ar) deixa a requisição
+      // pendurada em vez de degradar pro erro 502 abaixo.
       signal: AbortSignal.timeout(15000),
     });
     const data = await response.json();

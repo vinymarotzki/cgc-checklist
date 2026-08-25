@@ -1,8 +1,9 @@
 /**
  * Atividades concluídas de um grupo do CGC, para exportar XLSX em /controle.
  *
- * Proxy pro sasi-cgc — ver src/app/api/controle/cgc/route.ts, inclusive o
- * header x-controle-secret (CONTROLE_PROXY_SECRET) que autentica a chamada.
+ * Proxy pro cgc-atividades — ver src/app/api/controle/cgc/route.ts,
+ * inclusive o header x-controle-secret (CONTROLE_PROXY_SECRET) que
+ * autentica a chamada.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -32,10 +33,10 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL("/api/controle/cgc/activities", cgcAppUrl);
     url.searchParams.set("group", groupId);
-    // Mesmo timeout de SASI_API_TIMEOUT_MS (client.ts do sasi-cgc): sem isso,
-    // um sasi-cgc lento (ex: no meio de um scan contra a API SASI, não
-    // necessariamente fora do ar) deixa a requisição pendurada em vez de
-    // degradar pro erro 502 abaixo.
+    // Mesmo timeout de SASI_API_TIMEOUT_MS (client.ts do cgc-atividades):
+    // sem isso, um cgc-atividades lento (ex: no meio de um scan contra a
+    // API SASI, não necessariamente fora do ar) deixa a requisição
+    // pendurada em vez de degradar pro erro 502 abaixo.
     const response = await fetch(url, {
       cache: "no-store",
       headers: { "x-controle-secret": controleProxySecret },

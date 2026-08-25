@@ -18,7 +18,7 @@ services:
       - .env.local
     # CGC_APP_URL do .env.local (http://localhost:3001) so funciona rodando
     # `npm run dev` direto no host: dentro do container, `localhost` aponta
-    # pro proprio container, nao pro host onde o sasi-cgc esta publicado.
+    # pro proprio container, nao pro host onde o cgc-atividades esta publicado.
     # `environment:` tem precedencia sobre `env_file:` pra mesma chave, entao
     # isso sobrescreve so dentro do container (perfil dev, local), sem tocar
     # no .env.local nem em deploys reais (perfil prod nao tem esse override —
