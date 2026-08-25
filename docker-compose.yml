@@ -5,13 +5,6 @@ services:
       - "3000:3000"
     env_file:
       - .env.local
-    # CGC_APP_URL do .env.local (http://localhost:3001) so funciona rodando
-    # `npm run dev` direto no host: dentro do container, `localhost` aponta
-    # pro proprio container, nao pro host onde o sasi-cgc esta publicado.
-    # `environment:` tem precedencia sobre `env_file:` pra mesma chave, entao
-    # isso sobrescreve so dentro do container, sem tocar no .env.local.
-    environment:
-      - CGC_APP_URL=http://host.docker.internal:3001
     profiles:
       - prod
 
@@ -23,8 +16,13 @@ services:
       - "3000:3000"
     env_file:
       - .env.local
-    # Mesmo motivo do servico "app" acima: host.docker.internal em vez de
-    # localhost pro container alcancar o sasi-cgc publicado no host.
+    # CGC_APP_URL do .env.local (http://localhost:3001) so funciona rodando
+    # `npm run dev` direto no host: dentro do container, `localhost` aponta
+    # pro proprio container, nao pro host onde o sasi-cgc esta publicado.
+    # `environment:` tem precedencia sobre `env_file:` pra mesma chave, entao
+    # isso sobrescreve so dentro do container (perfil dev, local), sem tocar
+    # no .env.local nem em deploys reais (perfil prod nao tem esse override —
+    # la, CGC_APP_URL vem so do .env.local/env de deploy).
     environment:
       - WATCHPACK_POLLING=true
       - CGC_APP_URL=http://host.docker.internal:3001
