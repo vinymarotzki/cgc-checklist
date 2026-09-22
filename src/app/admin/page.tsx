@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { sasiAuthHeaders } from '@/lib/token';
 import { useSasiToken } from '@/hooks/useSasiToken';
+import LoadingScreen from '@/components/LoadingScreen';
 import { Lock, ArrowLeft, History, Plus, Trash2, User } from 'lucide-react';
 
 interface Activity {
@@ -247,15 +248,7 @@ function AdminPageContent() {
   }
 
   if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0F1117', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 40, height: 40, border: '3px solid #2A3045', borderTopColor: '#3B6EF5', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
-          <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
-          <p style={{ color: '#7A82A0', fontSize: 14 }}>Carregando administração...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Carregando administração..." />;
   }
 
   if (authError || !user) {

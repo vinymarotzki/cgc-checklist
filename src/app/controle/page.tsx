@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import LoadingScreen from "@/components/LoadingScreen";
 import * as XLSX from "xlsx";
 import { Download, RefreshCw } from "lucide-react";
 
@@ -241,11 +242,7 @@ export default function ControlePage() {
   const totalCgcConcluded = cgcGroups.reduce((sum, g) => sum + g.concluded, 0);
 
   if (loading) {
-    return (
-      <div style={{ background: "#0F1117", minHeight: "100vh", display: "grid", placeItems: "center", color: "#E8EAF0" }}>
-        Carregando controle...
-      </div>
-    );
+    return <LoadingScreen message="Carregando controle..." />;
   }
 
   return (

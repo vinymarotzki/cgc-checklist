@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
+import LoadingScreen from "@/components/LoadingScreen";
 import { getStatusColor } from "@/lib/checklist-status";
 import * as XLSX from "xlsx";
 import { Lock, RefreshCw, Plus, ExternalLink, Pencil, Trash2, Upload, User } from "lucide-react";
@@ -382,11 +383,7 @@ function ChecklistsPage() {
   }
 
   if (loading) {
-    return (
-      <div style={{ background: "#0F1117", minHeight: "100vh", display: "grid", placeItems: "center", color: "#E8EAF0" }}>
-        Carregando checklists...
-      </div>
-    );
+    return <LoadingScreen message="Carregando checklists..." />;
   }
 
   const totalActivities = checklists.reduce((sum, c) => sum + c.activity_count, 0);
