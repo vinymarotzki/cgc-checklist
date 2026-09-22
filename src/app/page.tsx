@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
+import LoadingScreen from "@/components/LoadingScreen";
 import Link from "next/link";
 import { Suspense } from "react";
 import { History, ArrowLeft, Search, MessageSquare, Pencil, X, Lock, Settings, User } from "lucide-react";
@@ -227,19 +228,7 @@ function ChecklistPage() {
   const groups = groupByCategory(filteredActivities);
 
   if (loading) {
-    return (
-      <div style={{ background: "#0F1117", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{
-            width: 40, height: 40, border: "3px solid #2A3045",
-            borderTopColor: "#3B6EF5", borderRadius: "50%",
-            animation: "spin 0.8s linear infinite", margin: "0 auto 16px"
-          }} />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ color: "#E8EAF0", fontSize: 14 }}>Autenticando...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Autenticando..." />;
   }
 
   if (authError || !user) {
