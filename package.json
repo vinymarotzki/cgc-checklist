@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "db:seed": "npx tsx src/lib/seed.ts"
+    "db:seed": "npx tsx src/lib/seed.ts",
+    "test:docker": "docker compose --profile test up -d --build --force-recreate && node scripts/test/smoke.mjs",
+    "test:smoke": "node scripts/test/smoke.mjs",
+    "test:docker:down": "docker compose --profile test down"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

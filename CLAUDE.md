@@ -19,7 +19,25 @@ npm run lint       # eslint .
 npm run db:seed    # npx tsx src/lib/seed.ts — populates activities in Turso
 ```
 
-There is no test suite and no test runner configured.
+There is no unit test suite. Instead, **every change is tested in the single Docker
+test container before its PR is opened into `develop`** (`lint`/`build` alone do not
+count):
+
+```bash
+npm run test:docker        # rebuilds + recreates the container, then runs the smoke test
+npm run test:smoke         # smoke test only, against an already-running container
+npm run test:docker:down   # stops and removes the test containers
+```
+
+The `test` profile of `docker-compose.yml` runs the production build (`runner`
+stage) as `cgc-checklist-test` on port 3100, next to a `cgc-checklist-test-mocks`
+container (`scripts/test/mock-services.mjs`) that fakes `AUTH_USER_ENDPOINT` and the
+cgc-atividades proxy target. It is isolated on purpose: it never reads `.env.local`,
+the database is a throwaway libSQL file inside the container, and the two fixed
+tokens are `token-usuario-a` and `token-usuario-b` (two users, so ownership rules
+can be tested). `scripts/test/smoke.mjs` holds the checks; when a change adds
+behavior, add its checks there in the same branch and report what ran in the PR's
+Summary.
 
 `db:seed` uses `@next/env` `loadEnvConfig`, so it reads the same `.env.local` as the
 app; pointing it at the production database is done by swapping env vars, not by a flag.
