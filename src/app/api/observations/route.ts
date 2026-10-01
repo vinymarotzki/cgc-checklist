@@ -62,12 +62,28 @@ export async function GET(req: NextRequest) {
   await initDb();
   const db = getDb();
 
-  const result = await db.execute(`
-    SELECT *
-    FROM observations
-    ORDER BY updated_at DESC
-    LIMIT 1000
-  `);
+  // A tela do checklist só mostra as observações dele, mas a rota devolvia as
+  // 1000 mais recentes de TODOS os checklists — com vários checklists
+  // ativos, as do checklist aberto podiam ficar de fora do corte. Com
+  // ?checklist= filtra no banco; sem o parâmetro mantém o comportamento
+  // antigo, para quem ainda chama a rota sem escopo.
+  const checklistId = req.nextUrl.searchParams.get("checklist")?.trim();
+  const result = checklistId
+    ? await db.execute({
+        sql: `SELECT o.*
+              FROM observations o
+              JOIN activities a ON a.id = o.activity_id
+              WHERE a.checklist_id = ?
+              ORDER BY o.updated_at DESC
+              LIMIT 1000`,
+        args: [checklistId],
+      })
+    : await db.execute(`
+        SELECT *
+        FROM observations
+        ORDER BY updated_at DESC
+        LIMIT 1000
+      `);
 
   return NextResponse.json({ observations: result.rows, user });
 }
