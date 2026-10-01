@@ -32,3 +32,44 @@ services:
       - /app/.next
     profiles:
       - dev
+
+  # Container único de teste: toda mudança passa por aqui antes da PR para
+  # develop (`npm run test:docker`). Usa o build de produção (mesmo stage
+  # `runner` do perfil prod), então testa o que vai para a Vercel, não o
+  # `next dev`. Isolado de propósito: não lê .env.local, o banco é um
+  # arquivo libSQL dentro do container (some no --force-recreate, cada rodada
+  # começa limpa) e AUTH_USER_ENDPOINT/CGC_APP_URL apontam para os mocks.
+  # Porta 3100 para não colidir com o dev (3000) nem com o cgc-atividades (3001).
+  test:
+    build: .
+    container_name: cgc-checklist-test
+    ports:
+      - "3100:3000"
+    environment:
+      - TURSO_DATABASE_URL=file:/tmp/cgc-checklist-test.db
+      - AUTH_USER_ENDPOINT=http://test-mocks:4000/me
+      - CGC_APP_URL=http://test-mocks:4000
+      - CONTROLE_PROXY_SECRET=segredo-de-teste
+    depends_on:
+      - test-mocks
+    profiles:
+      - test
+
+  # Substitui o AUTH_USER_ENDPOINT e o cgc-atividades — ver o cabeçalho de
+  # scripts/test/mock-services.mjs. O arquivo é copiado para a imagem em vez
+  # de montado como volume: bind mount depende da pasta estar compartilhada
+  # no Docker Desktop (Settings > Resources > File Sharing), e o teste não
+  # deve depender de configuração da máquina.
+  test-mocks:
+    build:
+      context: ./scripts/test
+      dockerfile_inline: |
+        FROM node:24-alpine
+        COPY mock-services.mjs /mocks/mock-services.mjs
+        CMD ["node", "/mocks/mock-services.mjs"]
+    container_name: cgc-checklist-test-mocks
+    environment:
+      - PORT=4000
+      - CONTROLE_PROXY_SECRET=segredo-de-teste
+    profiles:
+      - test
