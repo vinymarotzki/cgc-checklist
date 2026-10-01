@@ -119,6 +119,79 @@ async function main() {
   check("exclui checklist", deleted.status === 200, deleted.text);
   const afterDelete = await call("GET", `/api/activities?checklist=${checklistId}`, { token: TOKEN_A });
   check("atividades saem junto com o checklist", (afterDelete.json?.activities || []).length === 0);
+
+  await hardeningChecks();
+}
+
+// Regras da PR de endurecimento: /controle com login, autoria, escopo por
+// checklist e remoção em cascata. Dois usuários, porque autoria só se testa
+// com alguém tentando mexer no que é de outro.
+async function hardeningChecks() {
+  const TOKEN_B = "token-usuario-b";
+
+  console.log("\n/controle exige login");
+  for (const path of ["/api/controle/checklists", "/api/controle/cgc", "/api/controle/cgc/activities?group=grupo-cgc"]) {
+    check(`sem token em ${path.split("?")[0]} -> 401`, (await call("GET", path)).status === 401);
+  }
+  const groups = await call("GET", "/api/controle/cgc", { token: TOKEN_A });
+  check("com token, o proxy devolve os grupos do mock", groups.status === 200 && groups.json?.groups?.length === 2, groups.text);
+  const cgcActivities = await call("GET", "/api/controle/cgc/activities?group=grupo-cgc", { token: TOKEN_A });
+  check("com token, o proxy devolve as atividades do grupo", cgcActivities.json?.activities?.length === 2, cgcActivities.text);
+  check("com token, /api/controle/checklists -> 200", (await call("GET", "/api/controle/checklists", { token: TOKEN_A })).status === 200);
+
+  console.log("\nAutoria do checklist");
+  const created = await call("POST", "/api/checklists", {
+    token: TOKEN_A,
+    body: { title: "Do usuário A", activities: [{ category: "Cat", activity: "Ativ" }] },
+  });
+  const checklistId = created.json?.checklist?.id;
+  check("A cria um checklist", Boolean(checklistId), created.text);
+  if (!checklistId) return;
+
+  check("B não renomeia o checklist de A -> 403",
+    (await call("PATCH", "/api/checklists", { token: TOKEN_B, body: { id: checklistId, title: "Invadido" } })).status === 403);
+  check("B não exclui o checklist de A -> 403",
+    (await call("DELETE", "/api/checklists", { token: TOKEN_B, body: { id: checklistId } })).status === 403);
+  check("checklist inexistente -> 404",
+    (await call("DELETE", "/api/checklists", { token: TOKEN_A, body: { id: "nao-existe" } })).status === 404);
+  const stillThere = await call("GET", "/api/checklists", { token: TOKEN_A });
+  const survivor = (stillThere.json?.checklists || []).find((c) => c.id === checklistId);
+  check("o checklist de A continua intacto", survivor?.title === "Do usuário A", survivor?.title);
+
+  console.log("\nAutoria da observação");
+  const activityId = (await call("GET", `/api/activities?checklist=${checklistId}`, { token: TOKEN_A })).json?.activities?.[0]?.id;
+  const obs = await call("POST", "/api/observations", { token: TOKEN_A, body: { activity_id: activityId, text: "Nota de A" } });
+  const obsId = obs.json?.observation?.id;
+  check("A cria uma observação", Boolean(obsId), obs.text);
+  check("B não edita a observação de A -> 403",
+    (await call("PATCH", "/api/observations", { token: TOKEN_B, body: { id: obsId, text: "Invadida" } })).status === 403);
+  check("B não apaga a observação de A -> 403",
+    (await call("DELETE", "/api/observations", { token: TOKEN_B, body: { id: obsId } })).status === 403);
+  check("B pode criar a própria observação",
+    (await call("POST", "/api/observations", { token: TOKEN_B, body: { activity_id: activityId, text: "Nota de B" } })).status === 200);
+  check("A edita a própria observação",
+    (await call("PATCH", "/api/observations", { token: TOKEN_A, body: { id: obsId, text: "Nota de A editada" } })).status === 200);
+
+  console.log("\nEscopo por checklist");
+  check("apagar categoria sem ?checklist= -> 400",
+    (await call("DELETE", "/api/activities", { token: TOKEN_A, body: { category: "Cat" } })).status === 400);
+  check("renomear categoria sem ?checklist= -> 400",
+    (await call("PUT", "/api/activities", { token: TOKEN_A, body: { oldCategory: "Cat", category: "Outra" } })).status === 400);
+  const intact = await call("GET", `/api/activities?checklist=${checklistId}`, { token: TOKEN_A });
+  check("as atividades continuam lá depois das recusas", intact.json?.activities?.length === 1);
+
+  console.log("\nRemoção em cascata");
+  const obsBefore = (await call("GET", "/api/observations", { token: TOKEN_A })).json?.observations || [];
+  check("existem observações da atividade antes de apagar", obsBefore.some((o) => o.activity_id === activityId));
+  check("apagar a atividade pelo id -> 200",
+    (await call("DELETE", "/api/activities", { token: TOKEN_A, body: { id: activityId } })).status === 200);
+  const obsAfter = (await call("GET", "/api/observations", { token: TOKEN_A })).json?.observations || [];
+  check("as observações da atividade saíram junto", !obsAfter.some((o) => o.activity_id === activityId));
+  const histAfter = (await call("GET", "/api/history", { token: TOKEN_A })).json?.history || [];
+  check("o histórico da atividade saiu junto", !histAfter.some((h) => h.activity_id === activityId));
+
+  check("A exclui o próprio checklist (limpeza)",
+    (await call("DELETE", "/api/checklists", { token: TOKEN_A, body: { id: checklistId } })).status === 200);
 }
 
 main()
