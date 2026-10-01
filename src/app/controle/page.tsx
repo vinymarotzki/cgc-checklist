@@ -2,15 +2,18 @@
 
 /**
  * Painel de controle: resumos de checklists e atividades do CGC finalizados,
- * com exportação em XLSX. Página pública de propósito — sem sasi-token, sem
- * link em nenhuma outra tela do app (ver CLAUDE.md, seção Auth). Só acessível
- * por quem sabe a URL. Desktop apenas por enquanto, sem tratamento mobile.
+ * com exportação em XLSX. Sem link em nenhuma outra tela do app, mas exige
+ * sasi-token como as demais: antes era pública e só a URL "escondida"
+ * protegia dados de todos os checklists e do CGC. Desktop apenas por
+ * enquanto, sem tratamento mobile.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import LoadingScreen from "@/components/LoadingScreen";
+import { useSasiToken } from "@/hooks/useSasiToken";
+import { sasiAuthHeaders } from "@/lib/token";
 import * as XLSX from "xlsx";
-import { Download, RefreshCw } from "lucide-react";
+import { Download, Lock, RefreshCw } from "lucide-react";
 
 interface CompletedChecklist {
   id: string;
@@ -135,8 +138,10 @@ function exportCgcXlsx(groupName: string, activities: CgcConcludedActivity[]) {
   downloadWorkbook(rows, "CGC", `cgc-${groupName.toLowerCase()}-concluidas-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-export default function ControlePage() {
+function ControlePage() {
+  const token = useSasiToken();
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
 
   const [completedChecklists, setCompletedChecklists] = useState<CompletedChecklist[]>([]);
   const [selectedChecklistId, setSelectedChecklistId] = useState<string | null>(null);
@@ -151,7 +156,8 @@ export default function ControlePage() {
 
   const fetchChecklists = useCallback(async () => {
     try {
-      const res = await fetch("/api/controle/checklists");
+      const res = await fetch("/api/controle/checklists", { headers: sasiAuthHeaders(token) });
+      if (res.status === 401) { setAuthError(true); return; }
       if (!res.ok) return;
       const data = await res.json();
       const completed: CompletedChecklist[] = data.completed || [];
@@ -162,36 +168,40 @@ export default function ControlePage() {
     } catch {
       setChecklistError("Falha ao carregar os checklists finalizados.");
     }
-  }, [selectedChecklistId]);
+  }, [selectedChecklistId, token]);
 
   const fetchCgcGroups = useCallback(async () => {
     try {
-      const res = await fetch("/api/controle/cgc");
+      const res = await fetch("/api/controle/cgc", { headers: sasiAuthHeaders(token) });
+      if (res.status === 401) { setAuthError(true); return; }
       if (!res.ok) return;
       const data = await res.json();
       setCgcGroups(Array.isArray(data.groups) ? data.groups : []);
     } catch {
       setCgcError("Falha ao carregar o resumo do CGC.");
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
+    if (!token) { setAuthError(true); setLoading(false); return; }
     (async () => {
       await Promise.all([fetchChecklists(), fetchCgcGroups()]);
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (!selectedChecklistId) return;
     setFetchingItems(true);
-    fetch(`/api/controle/checklists?checklist_id=${encodeURIComponent(selectedChecklistId)}`)
+    fetch(`/api/controle/checklists?checklist_id=${encodeURIComponent(selectedChecklistId)}`, {
+      headers: sasiAuthHeaders(token),
+    })
       .then((res) => (res.ok ? res.json() : { items: [] }))
       .then((data) => setSelectedChecklistItems(data.items || []))
       .catch(() => setSelectedChecklistItems([]))
       .finally(() => setFetchingItems(false));
-  }, [selectedChecklistId]);
+  }, [selectedChecklistId, token]);
 
   function handleExportChecklist() {
     setChecklistError(null);
@@ -218,7 +228,9 @@ export default function ControlePage() {
     setCgcError(null);
     setExportingGroupId(group.id);
     try {
-      const res = await fetch(`/api/controle/cgc/activities?group=${encodeURIComponent(group.id)}`);
+      const res = await fetch(`/api/controle/cgc/activities?group=${encodeURIComponent(group.id)}`, {
+        headers: sasiAuthHeaders(token),
+      });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         setCgcError(data?.error || "Falha ao exportar as atividades do CGC.");
@@ -243,6 +255,21 @@ export default function ControlePage() {
 
   if (loading) {
     return <LoadingScreen message="Carregando controle..." />;
+  }
+
+  if (authError) {
+    return (
+      <div style={{ background: "#0F1117", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{
+          background: "#181C27", border: "1px solid #2A1A1A",
+          borderRadius: 12, padding: "40px 48px", textAlign: "center", maxWidth: 400
+        }}>
+          <Lock size={36} color="#F87171" style={{ marginBottom: 16 }} />
+          <h2 style={{ color: "#F87171", fontSize: 20, fontWeight: 600 }}>Acesso negado</h2>
+          <p style={{ color: "#E8EAF0", fontSize: 14 }}>Token inválido ou não informado.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -390,5 +417,14 @@ export default function ControlePage() {
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } } .spin-icon { animation: spin 0.8s linear infinite; }`}</style>
     </div>
+  );
+}
+
+// useSasiToken lê useSearchParams, que no App Router exige um Suspense acima.
+export default function Page() {
+  return (
+    <Suspense>
+      <ControlePage />
+    </Suspense>
   );
 }

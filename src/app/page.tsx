@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { sasiAuthHeaders } from "@/lib/token";
+import { isOwner } from "@/lib/ownership";
 import { useSasiToken } from "@/hooks/useSasiToken";
 import LoadingScreen from "@/components/LoadingScreen";
 import Link from "next/link";
@@ -33,6 +34,7 @@ interface Observation {
   id: string;
   activity_id: string;
   text: string;
+  user_id: string | null;
   user_name: string | null;
   created_at: string;
   updated_at: string;
@@ -528,6 +530,8 @@ function ChecklistPage() {
                                   }}>
                                     {note.text}
                                   </p>
+                                  {/* Só o autor edita/apaga (regra em lib/ownership.ts, aplicada também na API). */}
+                                  {isOwner(note.user_id, user.id) && (
                                   <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
                                     <button
                                       onClick={() => {
@@ -556,6 +560,7 @@ function ChecklistPage() {
                                       <X size={12} />
                                     </button>
                                   </div>
+                                  )}
                                 </div>
                                 <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, color: "#E8EAF0", fontSize: 10, opacity: 0.7 }}>
                                   <MessageSquare size={10} />

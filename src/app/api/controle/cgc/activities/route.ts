@@ -3,12 +3,16 @@
  *
  * Proxy pro cgc-atividades — ver src/app/api/controle/cgc/route.ts,
  * inclusive o header x-controle-secret (CONTROLE_PROXY_SECRET) que
- * autentica a chamada.
+ * autentica a chamada, e o motivo de exigir sasi-token antes do repasse.
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
+
   const cgcAppUrl = process.env.CGC_APP_URL;
   if (!cgcAppUrl) {
     return NextResponse.json(
