@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb, initDb } from "@/lib/db";
 import { authenticateToken } from "@/lib/auth";
 import { NO_ACCESS_MESSAGE, readSasiTokenHeader } from "@/lib/token";
+import { isOwner } from "@/lib/ownership";
+import type { InStatement } from "@libsql/client";
 import { v4 as uuidv4 } from "uuid";
 
 // O token só é aceito no header `x-sasi-token`; fora desse modelo, é usuário sem acesso.
@@ -18,6 +20,24 @@ async function requireAuth(req: NextRequest) {
   }
 
   return { user, error: null };
+}
+
+/** Devolve a resposta de erro (404/403) ou `null` quando o usuário pode alterar o checklist. */
+async function requireChecklistOwner(db: ReturnType<typeof getDb>, id: string, userId: unknown) {
+  const result = await db.execute({
+    sql: "SELECT created_by_id FROM checklists WHERE id = ?",
+    args: [id],
+  });
+  if (result.rows.length === 0) {
+    return NextResponse.json({ error: "Checklist não encontrado" }, { status: 404 });
+  }
+  if (!isOwner(result.rows[0].created_by_id, userId)) {
+    return NextResponse.json(
+      { error: "Só quem criou o checklist pode alterá-lo ou excluí-lo." },
+      { status: 403 }
+    );
+  }
+  return null;
 }
 
 export async function GET(req: NextRequest) {
@@ -73,23 +93,29 @@ export async function POST(req: NextRequest) {
   const now = new Date().toISOString();
   const checklistId = uuidv4();
 
-  await db.execute({
-    sql: `INSERT INTO checklists (id, title, created_by_id, created_by_name, created_at)
-          VALUES (?, ?, ?, ?, ?)`,
-    args: [checklistId, title, String(auth.user.id), String(auth.user.name), now],
-  });
+  // Num batch só: antes era um INSERT por atividade, uma ida ao Turso remoto
+  // por linha, e uma falha no meio deixava o checklist criado pela metade.
+  const statements: InStatement[] = [
+    {
+      sql: `INSERT INTO checklists (id, title, created_by_id, created_by_name, created_at)
+            VALUES (?, ?, ?, ?, ?)`,
+      args: [checklistId, title, String(auth.user.id), String(auth.user.name), now],
+    },
+  ];
 
   for (const item of activities) {
     const category = typeof item?.category === "string" ? item.category.trim() : "";
     const activity = typeof item?.activity === "string" ? item.activity.trim() : "";
     if (!category || !activity) continue;
 
-    await db.execute({
+    statements.push({
       sql: `INSERT INTO activities (id, category, activity, status, responsible, observation, checklist_id)
             VALUES (?, ?, ?, 'SEM_STATUS', NULL, NULL, ?)`,
       args: [uuidv4(), category, activity, checklistId],
     });
   }
+
+  await db.batch(statements, "write");
 
   return NextResponse.json({
     success: true,
@@ -122,6 +148,9 @@ export async function PATCH(req: NextRequest) {
   await initDb();
   const db = getDb();
 
+  const denied = await requireChecklistOwner(db, id, auth.user.id);
+  if (denied) return denied;
+
   await db.execute({
     sql: "UPDATE checklists SET title = ? WHERE id = ?",
     args: [title, id],
@@ -144,18 +173,28 @@ export async function DELETE(req: NextRequest) {
   await initDb();
   const db = getDb();
 
-  await db.execute({
-    sql: `DELETE FROM observations
-          WHERE activity_id IN (SELECT id FROM activities WHERE checklist_id = ?)`,
-    args: [id],
-  });
-  await db.execute({
-    sql: `DELETE FROM history
-          WHERE activity_id IN (SELECT id FROM activities WHERE checklist_id = ?)`,
-    args: [id],
-  });
-  await db.execute({ sql: "DELETE FROM activities WHERE checklist_id = ?", args: [id] });
-  await db.execute({ sql: "DELETE FROM checklists WHERE id = ?", args: [id] });
+  const denied = await requireChecklistOwner(db, id, auth.user.id);
+  if (denied) return denied;
+
+  // Transação: com os 4 DELETEs soltos, uma falha no meio deixava atividades
+  // sem checklist ou observações/histórico apontando para atividade apagada.
+  await db.batch(
+    [
+      {
+        sql: `DELETE FROM observations
+              WHERE activity_id IN (SELECT id FROM activities WHERE checklist_id = ?)`,
+        args: [id],
+      },
+      {
+        sql: `DELETE FROM history
+              WHERE activity_id IN (SELECT id FROM activities WHERE checklist_id = ?)`,
+        args: [id],
+      },
+      { sql: "DELETE FROM activities WHERE checklist_id = ?", args: [id] },
+      { sql: "DELETE FROM checklists WHERE id = ?", args: [id] },
+    ],
+    "write"
+  );
 
   return NextResponse.json({ success: true });
 }

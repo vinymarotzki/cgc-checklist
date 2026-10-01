@@ -19,7 +19,25 @@ npm run lint       # eslint .
 npm run db:seed    # npx tsx src/lib/seed.ts — populates activities in Turso
 ```
 
-There is no test suite and no test runner configured.
+There is no unit test suite. Instead, **every change is tested in the single Docker
+test container before its PR is opened into `develop`** (`lint`/`build` alone do not
+count):
+
+```bash
+npm run test:docker        # rebuilds + recreates the container, then runs the smoke test
+npm run test:smoke         # smoke test only, against an already-running container
+npm run test:docker:down   # stops and removes the test containers
+```
+
+The `test` profile of `docker-compose.yml` runs the production build (`runner`
+stage) as `cgc-checklist-test` on port 3100, next to a `cgc-checklist-test-mocks`
+container (`scripts/test/mock-services.mjs`) that fakes `AUTH_USER_ENDPOINT` and the
+cgc-atividades proxy target. It is isolated on purpose: it never reads `.env.local`,
+the database is a throwaway libSQL file inside the container, and the two fixed
+tokens are `token-usuario-a` and `token-usuario-b` (two users, so ownership rules
+can be tested). `scripts/test/smoke.mjs` holds the checks; when a change adds
+behavior, add its checks there in the same branch and report what ran in the PR's
+Summary.
 
 `db:seed` uses `@next/env` `loadEnvConfig`, so it reads the same `.env.local` as the
 app; pointing it at the production database is done by swapping env vars, not by a flag.
@@ -108,10 +126,31 @@ environment.
 `requireAuth` is a private per-file copy inside each checklist route
 (`/api/activities`, `/api/checklists`, `/api/observations`, `/api/history`), all
 reading the token through `readSasiTokenHeader` (never from the URL) so the rule
-above cannot drift between them. (The shared `src/lib/api-auth.ts` — which also
-returned the raw token to forward as a Bearer to the SASI API — moved to
-cgc-atividades along with the CGC routes that needed it; nothing in this repo talks
-to the SASI API anymore.)
+above cannot drift between them. A shared copy with the same rule lives in
+`src/lib/api-auth.ts` and is used by the `/api/controle/*` routes; the four private
+copies can be switched to it. (The old `api-auth.ts`, which also returned the raw
+token to forward as a Bearer to the SASI API, moved to cgc-atividades with the CGC
+routes; nothing in this repo talks to the SASI API anymore.)
+
+`/controle` and `/api/controle/*` require the token like every other screen. They
+used to be public, protected only by an unlinked URL. That exposed every completed
+checklist and, through the proxy, the cgc-atividades data already authenticated with
+`CONTROLE_PROXY_SECRET`, so the secret protected nothing.
+
+Authorization on top of authentication lives in `src/lib/ownership.ts` (`isOwner`):
+only the creator renames/deletes a checklist (`created_by_id`), and only the author
+edits/deletes an observation (`user_id`). Rows with no recorded owner (the migrated
+"Checklist existente", old observations) stay open to any authenticated user. The API
+enforces it (403); the screens only hide the buttons. Status/responsible changes and
+`/admin` edits stay open to everyone on purpose, because the checklist is
+collaborative.
+
+Category-wide operations in `/api/activities` (DELETE/PUT by `category`/`oldCategory`)
+require `?checklist=` and return 400 without it. They used to filter by category
+alone and hit every checklist at once. Multi-statement writes (checklist create and
+delete, activity update + history row, observation write + history row, activity
+delete with its observations/history) go through `db.batch(..., "write")`, so they
+commit or roll back together.
 
 ### Database
 
