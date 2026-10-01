@@ -1,9 +1,9 @@
 <div align="center">
 
-# Checklist de Simulados · Atividades do CGC
+# Checklist de Simulados
 
-Aplicação web da SASI para montar e acompanhar checklists de simulados, e para
-gerenciar as atividades que chegam ao CGC pela API SASI.
+Aplicação web da SASI para montar, acompanhar e registrar checklists de
+simulados.
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
@@ -29,23 +29,35 @@ gerenciar as atividades que chegam ao CGC pela API SASI.
 
 ## Visão geral
 
-Dois produtos convivem no mesmo app. Eles compartilham só o vocabulário de
-status e o esquema de autenticação.
-
-| Produto | Rotas | O que faz |
+| Tela | Rota | O que faz |
 | --- | --- | --- |
-| **Checklist de Simulados** | `/`, `/checklists`, `/admin`, `/history` | Atividades guardadas no Turso. O usuário cria checklists, marca status, comenta e consulta o histórico. |
-| **Atividades do CGC** | `/atividades-cgc`, `/atividades-cgc/historico` | Espelho somente leitura das mensagens da API SASI (Bone), separadas por grupo (CGC, NUPPAE, NGOA, CIPA). Status, comentários e histórico ficam no banco local, porque o token da API não tem permissão de escrita. |
-| **Controle** | `/controle` | Resumos dos checklists e das atividades finalizadas, com exportação em XLSX. A página não aparece em nenhum menu do app. |
+| **Checklist** | `/` | O checklist do simulado: o usuário marca status e comenta cada atividade. |
+| **Checklists** | `/checklists` | Lista dos checklists, com criação e exportação em XLSX. |
+| **Admin** | `/admin` | Edição das atividades e categorias. |
+| **Histórico** | `/history` | Todas as mudanças de status e os comentários. |
+| **Controle** | `/controle` | Resumos dos checklists e das atividades do CGC finalizadas, com exportação em XLSX. A página não aparece em nenhum menu do app. |
 
 **Status disponíveis:** `NAO_INICIADO`, `EM_ANDAMENTO` e `CONCLUIDO` aparecem
 no seletor. `SEM_STATUS` e `IMPEDIDO` existem só para dados legados. Tudo é
 definido em `src/lib/checklist-status.ts`.
 
+> **Atividades do CGC** ficam em outro repositório,
+> [`cgc-atividades`](https://github.com/vinymarotzki/cgc-atividades). Este app
+> só lê os dados dele, por proxy, para montar o `/controle`.
+
+```mermaid
+flowchart LR
+    U[Navegador] --> C[cgc-checklist]
+    C --> T[(Turso<br/>checklist)]
+    C -- "/api/controle/cgc*<br/>x-controle-secret" --> G[cgc-atividades]
+    G --> TG[(Turso<br/>CGC)]
+```
+
 ## Começando
 
 **Pré-requisitos:** Node.js 24, um banco no [Turso](https://turso.tech) e acesso
-ao endpoint de autenticação da SASI.
+ao endpoint de autenticação da SASI. Para o `/controle` mostrar os dados do CGC,
+o `cgc-atividades` precisa estar rodando (localmente, na porta `3001`).
 
 ```bash
 # 1. Instale as dependências
@@ -75,31 +87,13 @@ detalhes, veja [Autenticação](#autenticação).
 Coloque as variáveis no `.env.local` (fora do Git). Na Vercel, cadastre os
 mesmos valores em *Settings → Environment Variables*.
 
-### Obrigatórias
-
 | Variável | Para que serve |
 | --- | --- |
 | `TURSO_DATABASE_URL` | URL do banco libSQL (`libsql://...turso.io`) |
 | `TURSO_AUTH_TOKEN` | Token de acesso ao banco |
 | `AUTH_USER_ENDPOINT` | Endpoint que valida o `sasi-token`. Recebe `Authorization: Bearer <token>` e retorna um usuário com `id` e `name`. **Sem essa variável, o app recusa todo token, inclusive em localhost.** |
-| `SASI_API_TOKEN` | Token de provedor da API SASI (`pat_`, escopo `READ_MESSAGES`), usado pelas Atividades do CGC |
-
-### Opcionais
-
-| Variável | Padrão | Para que serve |
-| --- | --- | --- |
-| `SASI_API_BASE_URL` | `https://api.bone.sasi.io` | Base da API SASI |
-| `SASI_API_TIMEOUT_MS` | `15000` | Timeout das chamadas à API SASI |
-| `SASI_CGC_SCAN_CAP` | `500` | Máximo de mensagens que o servidor varre por consulta |
-| `SASI_CGC_FIELD_GROUP` | `selecione_time` | Campo do formulário que define o grupo |
-| `SASI_CGC_FIELD_PRIORITY` | `prioridades` | Campo de prioridade |
-| `SASI_CGC_FIELD_DEADLINE` | `prazo_de_entrega` | Campo de prazo |
-| `SASI_CGC_FIELD_DESCRIPTION` | `descreva` | Campo de descrição |
-| `CGC_CRON_SECRET` | — | Protege `/api/cgc/cron-sync`, chamada pelo GitHub Actions |
-| `CGC_WEBHOOK_SECRET` | — | Protege `/api/cgc/webhook`, chamada pelo painel do SASI |
-| `SASI_NOTIFY_TOKEN` | — | Ativa o push de atividades do CGC novas ou concluídas. Sem ele, o envio fica desligado. |
-| `SASI_NOTIFY_API_BASE_URL` | `https://api.sasi.io` | Base da API de notificação |
-| `SASI_NOTIFY_SUBSCRIPTION_KEY` | `app:1619` | Inscrição que recebe o push |
+| `CGC_APP_URL` | URL do `cgc-atividades`, usada pelo proxy do `/controle` (local: `http://localhost:3001`) |
+| `CONTROLE_PROXY_SECRET` | Segredo compartilhado com o `cgc-atividades`, enviado no header `x-controle-secret`. Os dois apps precisam do mesmo valor. Sem ele, o proxy responde 500 em vez de chamar o outro app sem credencial. |
 
 > **Atenção:** nenhuma variável usa o prefixo `NEXT_PUBLIC_`, e isso é de
 > propósito. Nenhum segredo chega ao navegador.
@@ -117,6 +111,23 @@ mesmos valores em *Settings → Environment Variables*.
 Não há suíte de testes. Antes de abrir uma PR, rode `npm run lint` e
 `npm run build`.
 
+<details>
+<summary><strong>Migração dos dados do CGC (só uma vez)</strong></summary>
+
+`scripts/migrate-cgc-data.mjs` copia as tabelas `cgc_*` deste banco para o banco
+do `cgc-atividades`. Ele usa `INSERT OR REPLACE`, então rodar de novo não duplica
+linhas.
+
+```bash
+SOURCE_TURSO_DATABASE_URL=... SOURCE_TURSO_AUTH_TOKEN=... \
+DEST_TURSO_DATABASE_URL=...   DEST_TURSO_AUTH_TOKEN=...   \
+node scripts/migrate-cgc-data.mjs --dry-run
+```
+
+Para gravar de verdade, rode o mesmo comando sem `--dry-run`.
+
+</details>
+
 ## Docker
 
 O `docker-compose.yml` tem dois perfis, e os dois leem o `.env.local`:
@@ -128,6 +139,10 @@ docker compose --profile dev up
 # Build de produção
 docker compose --profile prod up --build
 ```
+
+No perfil `dev`, o `CGC_APP_URL` vira `http://host.docker.internal:3001`, para
+o container alcançar o `cgc-atividades` que roda no host. Esse valor tem
+precedência sobre o `.env.local`.
 
 ## Autenticação
 
@@ -158,26 +173,25 @@ sequenceDiagram
 
 ```
 src/
-├── app/                  # Rotas (App Router) — toda página é client component
-│   ├── api/              # Route handlers: checklists, activities, cgc/*, controle/*
-│   ├── atividades-cgc/   # Atividades do CGC e histórico
-│   ├── checklists/       # Lista de checklists
-│   ├── admin/            # Edição de atividades e categorias
-│   ├── history/          # Histórico do checklist
-│   ├── controle/         # Painel de resumos + exportação XLSX
-│   └── globals.css       # Todas as regras responsivas
-├── hooks/useSasiToken.ts # Leitura do token no cliente
+├── app/                    # Rotas (App Router) — toda página é client component
+│   ├── page.tsx            # Checklist
+│   ├── checklists/         # Lista de checklists
+│   ├── admin/              # Edição de atividades e categorias
+│   ├── history/            # Histórico
+│   ├── controle/           # Resumos + exportação XLSX
+│   ├── api/                # activities, checklists, history, observations, controle/*
+│   └── globals.css         # Todas as regras responsivas
+├── components/             # LoadingScreen e componentes de UI (shadcn)
+├── hooks/useSasiToken.ts   # Leitura do token no cliente
 └── lib/
-    ├── db.ts             # Cliente Turso + initDb() (criação e migração das tabelas)
-    ├── token.ts          # Fonte única das regras do token
-    ├── auth.ts           # Validação contra AUTH_USER_ENDPOINT
-    ├── checklist-status.ts
-    ├── sasi-api/         # Única camada de rede com a API SASI
-    └── cgc/              # Mapeamento de campos, cache e totais por grupo
+    ├── db.ts               # Cliente Turso + initDb() (criação e migração das tabelas)
+    ├── token.ts            # Fonte única das regras do token
+    ├── auth.ts             # Validação contra AUTH_USER_ENDPOINT
+    ├── checklist-status.ts # Status e cores
+    └── seed.ts             # npm run db:seed
 ```
 
-Para decisões de arquitetura e limitações da API SASI, veja o
-[`CLAUDE.md`](CLAUDE.md).
+Para decisões de arquitetura, veja o [`CLAUDE.md`](CLAUDE.md).
 
 ## Fluxo de trabalho
 
