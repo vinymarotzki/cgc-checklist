@@ -1,26 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, initDb } from "@/lib/db";
-import { authenticateToken } from "@/lib/auth";
-import { NO_ACCESS_MESSAGE, readSasiTokenHeader } from "@/lib/token";
+import { invalidBodyResponse, readJsonBody, requireAuth } from "@/lib/api-auth";
 import { isOwner } from "@/lib/ownership";
 import type { InStatement } from "@libsql/client";
 import { v4 as uuidv4 } from "uuid";
-
-// O token só é aceito no header `x-sasi-token`; fora desse modelo, é usuário sem acesso.
-async function requireAuth(req: NextRequest) {
-  const token = readSasiTokenHeader(req.headers);
-
-  if (!token) {
-    return { user: null, error: NextResponse.json({ error: NO_ACCESS_MESSAGE }, { status: 401 }) };
-  }
-
-  const user = await authenticateToken(token);
-  if (!user) {
-    return { user: null, error: NextResponse.json({ error: "Token invalido ou expirado" }, { status: 401 }) };
-  }
-
-  return { user, error: null };
-}
 
 /** Devolve a resposta de erro (404/403) ou `null` quando o usuário pode alterar o checklist. */
 async function requireChecklistOwner(db: ReturnType<typeof getDb>, id: string, userId: unknown) {
@@ -80,7 +63,8 @@ export async function POST(req: NextRequest) {
   const auth = await requireAuth(req);
   if (auth.error) return auth.error;
 
-  const body = await req.json();
+  const body = await readJsonBody(req);
+  if (!body) return invalidBodyResponse();
   const title = typeof body.title === "string" ? body.title.trim() : "";
   const activities = Array.isArray(body.activities) ? body.activities : [];
 
@@ -133,7 +117,8 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireAuth(req);
   if (auth.error) return auth.error;
 
-  const body = await req.json();
+  const body = await readJsonBody(req);
+  if (!body) return invalidBodyResponse();
   const id = typeof body.id === "string" ? body.id.trim() : "";
   const title = typeof body.title === "string" ? body.title.trim() : "";
 
@@ -163,7 +148,8 @@ export async function DELETE(req: NextRequest) {
   const auth = await requireAuth(req);
   if (auth.error) return auth.error;
 
-  const body = await req.json();
+  const body = await readJsonBody(req);
+  if (!body) return invalidBodyResponse();
   const id = typeof body.id === "string" ? body.id.trim() : "";
 
   if (!id) {
