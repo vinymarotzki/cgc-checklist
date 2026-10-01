@@ -177,7 +177,8 @@ between the two repos even though they no longer share code.
 Screens are styled with inline styles, so media queries cannot live there. All
 responsive behavior sits in named classes in `src/app/globals.css`
 (`.app-header-inner`, `.app-nav`, `.split-card`, `.card-actions`, `.two-col`,
-`.field-row`, `.import-row`). Add responsive rules there, not inline.
+`.import-row`). Add responsive rules there, not inline. Keep that file free of dead
+rules: a class no screen uses (`grep -rw <class> src`) should not stay in the CSS.
 
 Icons are `lucide-react` components (e.g. `<Search size={14} />`), not emoji — every
 screen was migrated off emoji glyphs. Match that for new UI instead of reintroducing
