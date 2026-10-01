@@ -9,11 +9,19 @@
  * A rota real no cgc-atividades virou alcançável pela rede (antes era o
  * mesmo processo), então autentica com CONTROLE_PROXY_SECRET no header
  * x-controle-secret — sem ele o cgc-atividades responde 401.
+ *
+ * O segredo só protege o cgc-atividades se esta rota também exigir login:
+ * pública, ela repassaria a chamada já autenticada para qualquer visitante.
+ * Por isso exige sasi-token antes de qualquer repasse.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api-auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
+
   const cgcAppUrl = process.env.CGC_APP_URL;
   if (!cgcAppUrl) {
     return NextResponse.json(

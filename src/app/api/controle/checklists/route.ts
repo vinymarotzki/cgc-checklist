@@ -1,14 +1,20 @@
 /**
  * Resumo de checklists finalizados, para a página /controle.
  *
- * Rota pública de propósito: /controle não exige sasi-token (ver CLAUDE.md).
+ * Exige sasi-token como as demais rotas. Era pública "por obscuridade" (só
+ * quem sabia a URL), mas a URL é fácil de adivinhar e a resposta expõe
+ * nomes de usuários, responsáveis e observações de todos os checklists.
  * Mesmas queries de /api/history, só que sem a parte de log por atividade.
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api-auth";
 import { getDb, initDb } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
+
   await initDb();
   const db = getDb();
 

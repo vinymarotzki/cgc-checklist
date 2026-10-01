@@ -108,10 +108,31 @@ environment.
 `requireAuth` is a private per-file copy inside each checklist route
 (`/api/activities`, `/api/checklists`, `/api/observations`, `/api/history`), all
 reading the token through `readSasiTokenHeader` (never from the URL) so the rule
-above cannot drift between them. (The shared `src/lib/api-auth.ts` — which also
-returned the raw token to forward as a Bearer to the SASI API — moved to
-cgc-atividades along with the CGC routes that needed it; nothing in this repo talks
-to the SASI API anymore.)
+above cannot drift between them. A shared copy with the same rule lives in
+`src/lib/api-auth.ts` and is used by the `/api/controle/*` routes; the four private
+copies can be switched to it. (The old `api-auth.ts`, which also returned the raw
+token to forward as a Bearer to the SASI API, moved to cgc-atividades with the CGC
+routes; nothing in this repo talks to the SASI API anymore.)
+
+`/controle` and `/api/controle/*` require the token like every other screen. They
+used to be public, protected only by an unlinked URL. That exposed every completed
+checklist and, through the proxy, the cgc-atividades data already authenticated with
+`CONTROLE_PROXY_SECRET`, so the secret protected nothing.
+
+Authorization on top of authentication lives in `src/lib/ownership.ts` (`isOwner`):
+only the creator renames/deletes a checklist (`created_by_id`), and only the author
+edits/deletes an observation (`user_id`). Rows with no recorded owner (the migrated
+"Checklist existente", old observations) stay open to any authenticated user. The API
+enforces it (403); the screens only hide the buttons. Status/responsible changes and
+`/admin` edits stay open to everyone on purpose, because the checklist is
+collaborative.
+
+Category-wide operations in `/api/activities` (DELETE/PUT by `category`/`oldCategory`)
+require `?checklist=` and return 400 without it. They used to filter by category
+alone and hit every checklist at once. Multi-statement writes (checklist create and
+delete, activity update + history row, observation write + history row, activity
+delete with its observations/history) go through `db.batch(..., "write")`, so they
+commit or roll back together.
 
 ### Database
 

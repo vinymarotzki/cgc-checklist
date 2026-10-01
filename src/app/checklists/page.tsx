@@ -6,6 +6,7 @@ import { sasiAuthHeaders } from "@/lib/token";
 import { useSasiToken } from "@/hooks/useSasiToken";
 import LoadingScreen from "@/components/LoadingScreen";
 import { getStatusColor } from "@/lib/checklist-status";
+import { isOwner } from "@/lib/ownership";
 import * as XLSX from "xlsx";
 import { Lock, RefreshCw, Plus, ExternalLink, Pencil, Trash2, Upload, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 interface ChecklistSummary {
   id: string;
   title: string;
+  created_by_id: string | null;
   created_by_name: string | null;
   created_at: string;
   activity_count: number;
@@ -376,6 +378,10 @@ function ChecklistsPage() {
       });
       if (res.ok) {
         setChecklists((prev) => prev.filter((item) => item.id !== id));
+      } else {
+        // Antes a falha era silenciosa; agora a API pode recusar (403), então avisa.
+        const body = await res.json().catch(() => null);
+        alert(body?.error || "Falha ao excluir checklist.");
       }
     } finally {
       setDeletingId(null);
@@ -505,32 +511,37 @@ function ChecklistsPage() {
                   >
                     <ExternalLink /> <span className="btn-label-desktop">Abrir</span>
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    style={{ background: "#1E2333", borderColor: "#2A3045", color: "#E8EAF0" }}
-                    aria-label="Editar checklist"
-                    title="Editar checklist"
-                    onClick={() => openEditModal(checklist)}
-                  >
-                    <Pencil /> <span className="btn-label-desktop">Editar</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    style={{ background: "transparent", borderColor: "#3A2430", color: "#F87171" }}
-                    aria-label={deletingId === checklist.id ? "Excluindo..." : "Excluir checklist"}
-                    title={deletingId === checklist.id ? "Excluindo..." : "Excluir checklist"}
-                    disabled={deletingId === checklist.id}
-                    onClick={() => deleteChecklist(checklist.id)}
-                  >
-                    <Trash2 />
-                    <span className="btn-label-desktop">
-                      {deletingId === checklist.id ? "Excluindo..." : "Excluir"}
-                    </span>
-                  </Button>
+                  {/* Só o autor renomeia/exclui (regra em lib/ownership.ts, aplicada também na API). */}
+                  {isOwner(checklist.created_by_id, user.id) && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        style={{ background: "#1E2333", borderColor: "#2A3045", color: "#E8EAF0" }}
+                        aria-label="Editar checklist"
+                        title="Editar checklist"
+                        onClick={() => openEditModal(checklist)}
+                      >
+                        <Pencil /> <span className="btn-label-desktop">Editar</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        style={{ background: "transparent", borderColor: "#3A2430", color: "#F87171" }}
+                        aria-label={deletingId === checklist.id ? "Excluindo..." : "Excluir checklist"}
+                        title={deletingId === checklist.id ? "Excluindo..." : "Excluir checklist"}
+                        disabled={deletingId === checklist.id}
+                        onClick={() => deleteChecklist(checklist.id)}
+                      >
+                        <Trash2 />
+                        <span className="btn-label-desktop">
+                          {deletingId === checklist.id ? "Excluindo..." : "Excluir"}
+                        </span>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}

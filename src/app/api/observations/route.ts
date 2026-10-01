@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, initDb } from "@/lib/db";
 import { authenticateToken } from "@/lib/auth";
+import { isOwner } from "@/lib/ownership";
 import { NO_ACCESS_MESSAGE, readSasiTokenHeader } from "@/lib/token";
+import type { InStatement } from "@libsql/client";
 import { v4 as uuidv4 } from "uuid";
 
 // O token só é aceito no header `x-sasi-token`; fora desse modelo, é usuário sem acesso.
@@ -20,8 +22,13 @@ async function requireAuth(req: NextRequest) {
   return { user, error: null };
 }
 
-async function logObservationHistory(db: ReturnType<typeof getDb>, activityId: string, status: string, user: { id: string; name: string }, message: string) {
-  await db.execute({
+/**
+ * Monta (sem executar) o INSERT de histórico da observação, para ir no mesmo
+ * `db.batch` da escrita — antes eram chamadas separadas e uma falha entre
+ * elas deixava a observação gravada sem o registro no histórico.
+ */
+function observationHistoryStatement(activityId: string, status: string, user: { id: unknown; name: unknown }, message: string): InStatement {
+  return {
     sql: `INSERT INTO history (id, activity_id, old_status, new_status, user_id, user_name, observation, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
@@ -34,7 +41,7 @@ async function logObservationHistory(db: ReturnType<typeof getDb>, activityId: s
       message,
       new Date().toISOString(),
     ],
-  });
+  };
 }
 
 async function getActivityStatus(db: ReturnType<typeof getDb>, activityId: string) {
@@ -44,6 +51,8 @@ async function getActivityStatus(db: ReturnType<typeof getDb>, activityId: strin
   });
   return result.rows.length > 0 ? String(result.rows[0].status) : "SEM_STATUS";
 }
+
+const NOT_AUTHOR_MESSAGE = "Só quem escreveu a observação pode alterá-la ou apagá-la.";
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req);
@@ -78,6 +87,7 @@ export async function POST(req: NextRequest) {
   await initDb();
   const db = getDb();
   const now = new Date().toISOString();
+
   const observation = {
     id: uuidv4(),
     activity_id,
@@ -88,21 +98,26 @@ export async function POST(req: NextRequest) {
     updated_at: now,
   };
 
-  await db.execute({
-    sql: `INSERT INTO observations (id, activity_id, text, user_id, user_name, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    args: [
-      observation.id,
-      observation.activity_id,
-      observation.text,
-      observation.user_id,
-      observation.user_name,
-      observation.created_at,
-      observation.updated_at,
+  const status = await getActivityStatus(db, observation.activity_id);
+  await db.batch(
+    [
+      {
+        sql: `INSERT INTO observations (id, activity_id, text, user_id, user_name, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          observation.id,
+          observation.activity_id,
+          observation.text,
+          observation.user_id,
+          observation.user_name,
+          observation.created_at,
+          observation.updated_at,
+        ],
+      },
+      observationHistoryStatement(observation.activity_id, status, user, `Observação adicionada: ${observation.text}`),
     ],
-  });
-
-  await logObservationHistory(db, observation.activity_id, await getActivityStatus(db, observation.activity_id), user, `Observação adicionada: ${observation.text}`);
+    "write"
+  );
 
   return NextResponse.json({ observation });
 }
@@ -132,17 +147,28 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Observação não encontrada" }, { status: 404 });
   }
 
-  await db.execute({
-    sql: `UPDATE observations SET text = ?, updated_at = ? WHERE id = ?`,
-    args: [text.trim(), now, id],
-  });
+  const record = current.rows[0];
+  if (!isOwner(record.user_id, user.id)) {
+    return NextResponse.json({ error: NOT_AUTHOR_MESSAGE }, { status: 403 });
+  }
+
+  const activityId = String(record.activity_id);
+  const status = await getActivityStatus(db, activityId);
+  await db.batch(
+    [
+      {
+        sql: `UPDATE observations SET text = ?, updated_at = ? WHERE id = ?`,
+        args: [text.trim(), now, id],
+      },
+      observationHistoryStatement(activityId, status, user, `Observação editada: ${text.trim()}`),
+    ],
+    "write"
+  );
 
   const updated = await db.execute({
     sql: `SELECT * FROM observations WHERE id = ?`,
     args: [id],
   });
-
-  await logObservationHistory(db, String(updated.rows[0].activity_id), await getActivityStatus(db, String(updated.rows[0].activity_id)), user, `Observação editada: ${text.trim()}`);
 
   return NextResponse.json({ observation: updated.rows[0] });
 }
@@ -172,13 +198,19 @@ export async function DELETE(req: NextRequest) {
   }
 
   const observationRecord = current.rows[0];
+  if (!isOwner(observationRecord.user_id, user.id)) {
+    return NextResponse.json({ error: NOT_AUTHOR_MESSAGE }, { status: 403 });
+  }
 
-  await db.execute({
-    sql: `DELETE FROM observations WHERE id = ?`,
-    args: [id],
-  });
-
-  await logObservationHistory(db, String(observationRecord.activity_id), await getActivityStatus(db, String(observationRecord.activity_id)), user, `Observação apagada: ${String(observationRecord.text)}`);
+  const activityId = String(observationRecord.activity_id);
+  const status = await getActivityStatus(db, activityId);
+  await db.batch(
+    [
+      { sql: `DELETE FROM observations WHERE id = ?`, args: [id] },
+      observationHistoryStatement(activityId, status, user, `Observação apagada: ${String(observationRecord.text)}`),
+    ],
+    "write"
+  );
 
   return NextResponse.json({ success: true, id });
 }
