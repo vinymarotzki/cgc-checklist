@@ -28,31 +28,6 @@ body {
 }
 
 /* Status badge classes */
-.status-SEM_STATUS {
-  background: #1E2333;
-  color: #7A82A0;
-  border-color: #2A3045;
-}
-.status-NAO_INICIADO {
-  background: #1E1A2A;
-  color: #A78BFA;
-  border-color: #7C3AED;
-}
-.status-EM_ANDAMENTO {
-  background: #1A2E4A;
-  color: #60A5FA;
-  border-color: #2563EB;
-}
-.status-CONCLUIDO {
-  background: #0F2A1E;
-  color: #34D399;
-  border-color: #059669;
-}
-.status-IMPEDIDO {
-  background: #2A1A1A;
-  color: #F87171;
-  border-color: #DC2626;
-}
 
 /* Scrollbar */
 ::-webkit-scrollbar {
@@ -113,14 +88,6 @@ select option {
   gap: 16px;
   flex-wrap: wrap;
   min-height: 60px;
-}
-
-.history-title-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
 }
 
 .history-back-link {
@@ -514,43 +481,6 @@ select option {
   border: 1px solid var(--border);
 }
 
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.history-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px 20px;
-  border-left: 3px solid #2A3045;
-}
-
-.history-card-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.history-card-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.history-card-meta {
-  text-align: right;
-  flex-shrink: 0;
-  min-width: 0;
-}
-
-.history-category-tag {
-  margin-bottom: 6px;
-}
-
 .history-category-badge {
   /* --muted (#4A5270) sobre o fundo escuro fica quase ilegível; --text-muted
      mantém o tom secundário com contraste suficiente. */
@@ -562,13 +492,6 @@ select option {
   padding: 2px 8px;
   font-weight: 500;
   letter-spacing: 0.3px;
-}
-
-.history-activity {
-  color: #C8CAD6;
-  font-size: 13px;
-  margin: 0 0 10px;
-  line-height: 1.5;
 }
 
 .history-status-row {
@@ -584,43 +507,6 @@ select option {
   padding: 4px 12px;
   border-radius: 20px;
   white-space: nowrap;
-}
-
-.history-observation-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  border: 1px solid;
-  background: rgba(96, 165, 250, 0.12);
-}
-
-.history-observation {
-  color: var(--muted);
-  font-size: 12px;
-  margin: 8px 0 0;
-  font-style: italic;
-}
-
-.history-card-meta {
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.meta-name {
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.meta-date {
-  color: var(--muted);
-  font-size: 11px;
-  margin-top: 4px;
-  font-family: monospace;
 }
 
 @media (max-width: 768px) {
@@ -656,17 +542,6 @@ select option {
     width: fit-content;
   }
 
-  .history-card-content {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .history-card-meta {
-    width: 100%;
-    text-align: left;
-    margin-top: 14px;
-  }
-
   .history-category-badge {
     max-width: 100%;
     white-space: nowrap;
@@ -676,14 +551,6 @@ select option {
 
   .history-status-row {
     justify-content: flex-start;
-  }
-
-  .history-card {
-    padding: 14px 16px;
-  }
-
-  .history-activity {
-    word-break: break-word;
   }
 
   .history-search-input {
@@ -715,10 +582,6 @@ select option {
     justify-content: flex-start;
   }
 
-  .history-card {
-    border-left-width: 2px;
-  }
-
   .history-status-pill {
     min-width: 0;
   }
@@ -731,12 +594,6 @@ select option {
 
   .history-completions-list {
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  }
-
-  .history-card-meta {
-    width: 100%;
-    text-align: left;
-    margin-top: 12px;
   }
 
   .history-actions-row {
@@ -813,212 +670,13 @@ select option {
   }
 }
 
-/* Botão de comentário de cada atividade do CGC. Alvo de clique pequeno e sem
-   hover antes fazia o botão parecer decorativo em vez de interativo. Quando a
-   atividade já tem comentário o botão fica destacado em repouso (não só no
-   hover), pra ficar óbvio que há algo pra ler ali. */
-.cgc-comment-button {
-  position: relative;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: #E8EAF0;
-  border-radius: 6px;
-  padding: 6px 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.cgc-comment-button:hover {
-  background: rgba(59, 110, 245, 0.14);
-  border-color: var(--accent);
-  color: #60A5FA;
-}
-
-.cgc-comment-button[data-has-notes="true"] {
-  color: #60A5FA;
-  background: rgba(59, 110, 245, 0.12);
-  border-color: var(--accent-dim);
-}
-
-.cgc-comment-button[data-has-notes="true"]:hover {
-  background: rgba(59, 110, 245, 0.22);
-  border-color: var(--accent);
-}
-
-.cgc-comment-badge {
-  position: absolute;
-  top: -7px;
-  right: -7px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: white;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 16px;
-  text-align: center;
-  border: 2px solid var(--surface);
-}
-
-/* Linha com os toggles de "detalhes" e "comentários" de uma atividade do CGC.
-   Os dois usam o mesmo estilo de link discreto (.cgc-section-toggle) — antes
-   comentários ficavam sempre abertos, empurrando a lista inteira pra baixo em
-   atividades com várias notas; agora ficam escondidos até o usuário pedir. */
-.cgc-toggle-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 8px;
-}
-
-.cgc-section-toggle {
-  background: transparent;
-  border: none;
-  padding: 0;
-  color: #60A5FA;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: color 0.15s ease;
-}
-
-.cgc-section-toggle:hover {
-  color: #8FBBFA;
-}
-
-/* Comentários de uma atividade do CGC, em formato de bolha (avatar + autor +
-   hora + texto): antes eram parágrafos soltos sem autor nem data, difícil de
-   distinguir um comentário do outro. As ações de editar/apagar ficam sempre
-   visíveis (não só no hover) pra funcionar igual em telas touch. */
-.cgc-notes-box {
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  margin-top: 8px;
-  overflow: hidden;
-}
-
-.cgc-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-}
-
-.cgc-note + .cgc-note {
-  border-top: 1px solid var(--border);
-}
-
-.cgc-note-avatar {
-  flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--accent-dim);
-  color: var(--text);
-  font-size: 11px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.cgc-note-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.cgc-note-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.cgc-note-author {
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.cgc-note-time {
-  color: var(--text-muted);
-  font-size: 11px;
-}
-
-.cgc-note-text {
-  color: #E8EAF0;
-  font-size: 13px;
-  margin: 3px 0 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.55;
-}
-
-.cgc-note-actions {
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.cgc-note-action {
-  background: transparent;
-  border: none;
-  padding: 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: var(--text-muted);
-  display: flex;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.cgc-note-action:hover {
-  background: rgba(96, 165, 250, 0.15);
-  color: #60A5FA;
-}
-
-.cgc-note-action-danger:hover {
-  background: rgba(248, 113, 113, 0.15);
-  color: #F87171;
-}
-
 /* Tablet: um pouco mais de respiro entre bolhas de comentário. */
-@media (max-width: 1024px) {
-  .cgc-note {
-    padding: 10px;
-  }
-}
 
 /* Mobile: telas estreitas ganham mais espaço tirando o avatar do caminho e
    deixando nome/hora quebrarem linha em vez de espremer o texto. */
 @media (max-width: 480px) {
-  .cgc-note-avatar {
-    display: none;
-  }
-
-  .cgc-note {
-    padding: 9px 10px;
-    gap: 0;
-  }
-
-  .cgc-note-head {
-    gap: 6px;
-  }
 
   /* Alvo de toque maior pro botão de comentário nesse tamanho de tela. */
-  .cgc-comment-button {
-    padding: 8px 12px;
-  }
 }
 
 /* Duas colunas que viram uma só quando a tela aperta. */
@@ -1029,12 +687,6 @@ select option {
 }
 
 /* Par rótulo/valor dos campos da atividade. */
-.field-row {
-  display: grid;
-  grid-template-columns: minmax(90px, 160px) 1fr;
-  gap: 10px;
-  align-items: baseline;
-}
 
 /* Linha de pré-visualização da importação de planilha. */
 .import-row {
@@ -1069,13 +721,8 @@ select option {
   }
 
   .two-col,
-  .field-row,
   .import-row {
     grid-template-columns: 1fr;
-  }
-
-  .field-row {
-    gap: 2px;
   }
 
   .import-row {
@@ -1092,10 +739,6 @@ select option {
 }
 
 @layer base {
-  .theme {
-    --font-heading: var(--font-sans);
-    --font-sans: var(--font-sans);
-  }
   :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
