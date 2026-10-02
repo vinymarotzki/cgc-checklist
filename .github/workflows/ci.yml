@@ -1,0 +1,56 @@
+name: CI
+
+# Roda em toda PR para develop/main e em push nessas duas branches. É a
+# versão automática da regra do CLAUDE.md: nada entra em develop sem lint,
+# build e o teste de fumaça no container de teste.
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+# Uma rodada nova na mesma PR cancela a anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-build:
+    name: Lint e build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      # O build não precisa de banco nem de login: as rotas só leem
+      # TURSO_DATABASE_URL e AUTH_USER_ENDPOINT quando recebem requisição.
+      - run: npm run build
+
+  smoke-docker:
+    name: Teste de fumaça no container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # Mesmo comando que se roda local: sobe o container de teste (banco
+      # descartável e auth falso, ver docker-compose.yml) e roda
+      # scripts/test/smoke.mjs.
+      - run: npm run test:docker
+      - name: Logs do container (se falhou)
+        if: failure()
+        run: |
+          docker logs cgc-checklist-test || true
+          docker logs cgc-checklist-test-mocks || true
+      - name: Derruba os containers
+        if: always()
+        run: npm run test:docker:down

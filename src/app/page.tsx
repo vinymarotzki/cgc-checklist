@@ -124,7 +124,9 @@ function ChecklistPage() {
   const fetchObservations = useCallback(async () => {
     if (!token || !checklistId) return;
     try {
-      const res = await fetch("/api/observations", { headers: sasiAuthHeaders(token) });
+      const res = await fetch(`/api/observations?checklist=${encodeURIComponent(checklistId)}`, {
+        headers: sasiAuthHeaders(token),
+      });
       if (!res.ok) return;
       const data = await res.json();
       setObservations(data.observations || []);

@@ -123,12 +123,15 @@ Server side, `authenticateToken` (`src/lib/auth.ts`) validates the token against
 `AUTH_USER_ENDPOINT`; without that env var *every* token is rejected, in every
 environment.
 
-`requireAuth` is a private per-file copy inside each checklist route
-(`/api/activities`, `/api/checklists`, `/api/observations`, `/api/history`), all
-reading the token through `readSasiTokenHeader` (never from the URL) so the rule
-above cannot drift between them. A shared copy with the same rule lives in
-`src/lib/api-auth.ts` and is used by the `/api/controle/*` routes; the four private
-copies can be switched to it. (The old `api-auth.ts`, which also returned the raw
+`requireAuth` lives in one place, `src/lib/api-auth.ts`, used by every route
+(`/api/activities`, `/api/checklists`, `/api/observations`, `/api/history`,
+`/api/controle/*`). It reads the token through `readSasiTokenHeader` (never from the
+URL), so the rule above cannot drift between routes. The same file has
+`readJsonBody` + `invalidBodyResponse`: a body that is empty, not JSON or not an
+object returns 400 instead of a 500 from a thrown `req.json()`. Statuses written by
+`PATCH /api/activities` are checked with `isKnownStatus` (`checklist-status.ts`).
+`authenticateToken` keeps a 60s in-memory cache capped at 500 entries (expired ones
+are dropped first, then the oldest). (The old `api-auth.ts`, which also returned the raw
 token to forward as a Bearer to the SASI API, moved to cgc-atividades with the CGC
 routes; nothing in this repo talks to the SASI API anymore.)
 
@@ -177,7 +180,8 @@ between the two repos even though they no longer share code.
 Screens are styled with inline styles, so media queries cannot live there. All
 responsive behavior sits in named classes in `src/app/globals.css`
 (`.app-header-inner`, `.app-nav`, `.split-card`, `.card-actions`, `.two-col`,
-`.field-row`, `.import-row`). Add responsive rules there, not inline.
+`.import-row`). Add responsive rules there, not inline. Keep that file free of dead
+rules: a class no screen uses (`grep -rw <class> src`) should not stay in the CSS.
 
 Icons are `lucide-react` components (e.g. `<Search size={14} />`), not emoji — every
 screen was migrated off emoji glyphs. Match that for new UI instead of reintroducing

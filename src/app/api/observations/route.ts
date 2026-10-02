@@ -1,26 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, initDb } from "@/lib/db";
-import { authenticateToken } from "@/lib/auth";
 import { isOwner } from "@/lib/ownership";
-import { NO_ACCESS_MESSAGE, readSasiTokenHeader } from "@/lib/token";
+import { invalidBodyResponse, readJsonBody, requireAuth } from "@/lib/api-auth";
 import type { InStatement } from "@libsql/client";
 import { v4 as uuidv4 } from "uuid";
-
-// O token só é aceito no header `x-sasi-token`; fora desse modelo, é usuário sem acesso.
-async function requireAuth(req: NextRequest) {
-  const token = readSasiTokenHeader(req.headers);
-
-  if (!token) {
-    return { user: null, error: NextResponse.json({ error: NO_ACCESS_MESSAGE }, { status: 401 }) };
-  }
-
-  const user = await authenticateToken(token);
-  if (!user) {
-    return { user: null, error: NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 }) };
-  }
-
-  return { user, error: null };
-}
 
 /**
  * Monta (sem executar) o INSERT de histórico da observação, para ir no mesmo
@@ -62,12 +45,28 @@ export async function GET(req: NextRequest) {
   await initDb();
   const db = getDb();
 
-  const result = await db.execute(`
-    SELECT *
-    FROM observations
-    ORDER BY updated_at DESC
-    LIMIT 1000
-  `);
+  // A tela do checklist só mostra as observações dele, mas a rota devolvia as
+  // 1000 mais recentes de TODOS os checklists — com vários checklists
+  // ativos, as do checklist aberto podiam ficar de fora do corte. Com
+  // ?checklist= filtra no banco; sem o parâmetro mantém o comportamento
+  // antigo, para quem ainda chama a rota sem escopo.
+  const checklistId = req.nextUrl.searchParams.get("checklist")?.trim();
+  const result = checklistId
+    ? await db.execute({
+        sql: `SELECT o.*
+              FROM observations o
+              JOIN activities a ON a.id = o.activity_id
+              WHERE a.checklist_id = ?
+              ORDER BY o.updated_at DESC
+              LIMIT 1000`,
+        args: [checklistId],
+      })
+    : await db.execute(`
+        SELECT *
+        FROM observations
+        ORDER BY updated_at DESC
+        LIMIT 1000
+      `);
 
   return NextResponse.json({ observations: result.rows, user });
 }
@@ -77,7 +76,8 @@ export async function POST(req: NextRequest) {
   if (auth.error) return auth.error;
   const user = auth.user;
 
-  const body = await req.json();
+  const body = await readJsonBody(req);
+  if (!body) return invalidBodyResponse();
   const { activity_id, text } = body;
 
   if (!activity_id || !text || typeof text !== "string") {
@@ -127,7 +127,8 @@ export async function PATCH(req: NextRequest) {
   if (auth.error) return auth.error;
   const user = auth.user;
 
-  const body = await req.json();
+  const body = await readJsonBody(req);
+  if (!body) return invalidBodyResponse();
   const { id, text } = body;
 
   if (!id || !text || typeof text !== "string") {
@@ -178,7 +179,8 @@ export async function DELETE(req: NextRequest) {
   if (auth.error) return auth.error;
   const user = auth.user;
 
-  const body = await req.json();
+  const body = await readJsonBody(req);
+  if (!body) return invalidBodyResponse();
   const { id } = body;
 
   if (!id) {

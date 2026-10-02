@@ -90,3 +90,13 @@ export function getCategoryColor(category: string): string {
   }
   return colors[Math.abs(hash) % colors.length];
 }
+
+/**
+ * Valida um status vindo de fora (corpo de requisição). Aceita os 5 do
+ * vocabulário, inclusive SEM_STATUS e IMPEDIDO, que o seletor não oferece mas
+ * existem em dados antigos — recusar só texto desconhecido, sem mudar o que
+ * já é gravável hoje.
+ */
+export function isKnownStatus(value: unknown): value is ChecklistStatus {
+  return typeof value === "string" && Object.prototype.hasOwnProperty.call(STATUS_LABELS, value);
+}
