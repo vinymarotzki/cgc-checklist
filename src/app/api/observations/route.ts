@@ -1,26 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, initDb } from "@/lib/db";
-import { authenticateToken } from "@/lib/auth";
 import { isOwner } from "@/lib/ownership";
-import { NO_ACCESS_MESSAGE, readSasiTokenHeader } from "@/lib/token";
+import { invalidBodyResponse, readJsonBody, requireAuth } from "@/lib/api-auth";
 import type { InStatement } from "@libsql/client";
 import { v4 as uuidv4 } from "uuid";
-
-// O token só é aceito no header `x-sasi-token`; fora desse modelo, é usuário sem acesso.
-async function requireAuth(req: NextRequest) {
-  const token = readSasiTokenHeader(req.headers);
-
-  if (!token) {
-    return { user: null, error: NextResponse.json({ error: NO_ACCESS_MESSAGE }, { status: 401 }) };
-  }
-
-  const user = await authenticateToken(token);
-  if (!user) {
-    return { user: null, error: NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 }) };
-  }
-
-  return { user, error: null };
-}
 
 /**
  * Monta (sem executar) o INSERT de histórico da observação, para ir no mesmo
@@ -77,7 +60,8 @@ export async function POST(req: NextRequest) {
   if (auth.error) return auth.error;
   const user = auth.user;
 
-  const body = await req.json();
+  const body = await readJsonBody(req);
+  if (!body) return invalidBodyResponse();
   const { activity_id, text } = body;
 
   if (!activity_id || !text || typeof text !== "string") {
@@ -127,7 +111,8 @@ export async function PATCH(req: NextRequest) {
   if (auth.error) return auth.error;
   const user = auth.user;
 
-  const body = await req.json();
+  const body = await readJsonBody(req);
+  if (!body) return invalidBodyResponse();
   const { id, text } = body;
 
   if (!id || !text || typeof text !== "string") {
@@ -178,7 +163,8 @@ export async function DELETE(req: NextRequest) {
   if (auth.error) return auth.error;
   const user = auth.user;
 
-  const body = await req.json();
+  const body = await readJsonBody(req);
+  if (!body) return invalidBodyResponse();
   const { id } = body;
 
   if (!id) {

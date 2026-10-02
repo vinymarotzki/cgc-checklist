@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, initDb } from "@/lib/db";
-import { authenticateToken } from "@/lib/auth";
-import { NO_ACCESS_MESSAGE, readSasiTokenHeader } from "@/lib/token";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
-  // O token só é aceito no header `x-sasi-token`; fora desse modelo, é usuário sem acesso.
-  const token = readSasiTokenHeader(req.headers);
-
-  if (!token) {
-    return NextResponse.json({ error: NO_ACCESS_MESSAGE }, { status: 401 });
-  }
-
-  const user = await authenticateToken(token);
-  if (!user) {
-    return NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 });
-  }
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
+  const user = auth.user;
 
   await initDb();
   const db = getDb();
@@ -35,7 +26,6 @@ export async function GET(req: NextRequest) {
   `);
 
   const selectedChecklistId = req.nextUrl.searchParams.get("checklist_id");
-  console.log("/api/history called with checklist_id:", selectedChecklistId);
 
   let selectedChecklistItems: unknown[] = [];
 
@@ -49,7 +39,6 @@ export async function GET(req: NextRequest) {
       `,
       args: [selectedChecklistId],
     });
-    console.log("completed_checklist_items rows count:", itemsResult.rows.length);
     selectedChecklistItems = itemsResult.rows;
   }
 

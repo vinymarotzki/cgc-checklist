@@ -123,12 +123,15 @@ Server side, `authenticateToken` (`src/lib/auth.ts`) validates the token against
 `AUTH_USER_ENDPOINT`; without that env var *every* token is rejected, in every
 environment.
 
-`requireAuth` is a private per-file copy inside each checklist route
-(`/api/activities`, `/api/checklists`, `/api/observations`, `/api/history`), all
-reading the token through `readSasiTokenHeader` (never from the URL) so the rule
-above cannot drift between them. A shared copy with the same rule lives in
-`src/lib/api-auth.ts` and is used by the `/api/controle/*` routes; the four private
-copies can be switched to it. (The old `api-auth.ts`, which also returned the raw
+`requireAuth` lives in one place, `src/lib/api-auth.ts`, used by every route
+(`/api/activities`, `/api/checklists`, `/api/observations`, `/api/history`,
+`/api/controle/*`). It reads the token through `readSasiTokenHeader` (never from the
+URL), so the rule above cannot drift between routes. The same file has
+`readJsonBody` + `invalidBodyResponse`: a body that is empty, not JSON or not an
+object returns 400 instead of a 500 from a thrown `req.json()`. Statuses written by
+`PATCH /api/activities` are checked with `isKnownStatus` (`checklist-status.ts`).
+`authenticateToken` keeps a 60s in-memory cache capped at 500 entries (expired ones
+are dropped first, then the oldest). (The old `api-auth.ts`, which also returned the raw
 token to forward as a Bearer to the SASI API, moved to cgc-atividades with the CGC
 routes; nothing in this repo talks to the SASI API anymore.)
 

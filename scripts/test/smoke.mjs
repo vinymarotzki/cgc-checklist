@@ -25,14 +25,14 @@ function check(name, condition, detail) {
   }
 }
 
-async function call(method, path, { token, body } = {}) {
+async function call(method, path, { token, body, raw } = {}) {
   const headers = {};
   if (token) headers["x-sasi-token"] = token;
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (body !== undefined || raw !== undefined) headers["Content-Type"] = "application/json";
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: raw !== undefined ? raw : body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await res.text();
   let json = null;
@@ -121,6 +121,7 @@ async function main() {
   check("atividades saem junto com o checklist", (afterDelete.json?.activities || []).length === 0);
 
   await hardeningChecks();
+  await inputChecks();
 }
 
 // Regras da PR de endurecimento: /controle com login, autoria, escopo por
@@ -203,3 +204,36 @@ main()
     console.log(`\n${passes} ok, ${failures} falha(s)`);
     process.exit(failures > 0 ? 1 : 0);
   });
+
+// Validação de entrada: corpo que não é JSON e status fora do vocabulário.
+async function inputChecks() {
+  console.log("\nValidação de entrada");
+  const created = await call("POST", "/api/checklists", {
+    token: TOKEN_A,
+    body: { title: "Validação", activities: [{ category: "Cat", activity: "Ativ" }] },
+  });
+  const checklistId = created.json?.checklist?.id;
+  check("cria o checklist da validação", Boolean(checklistId), created.text);
+  if (!checklistId) return;
+  const activityId = (await call("GET", `/api/activities?checklist=${checklistId}`, { token: TOKEN_A })).json?.activities?.[0]?.id;
+
+  for (const [method, path] of [
+    ["POST", "/api/checklists"], ["PATCH", "/api/checklists"], ["DELETE", "/api/checklists"],
+    ["PATCH", "/api/activities"], ["POST", "/api/observations"],
+  ]) {
+    const res = await call(method, path, { token: TOKEN_A, raw: "isto não é json" });
+    check(`${method} ${path} com corpo inválido -> 400 (não 500)`, res.status === 400, `status ${res.status}`);
+  }
+
+  const bad = await call("PATCH", "/api/activities", { token: TOKEN_A, body: { id: activityId, status: "QUALQUER_COISA" } });
+  check("status desconhecido -> 400", bad.status === 400, `status ${bad.status}`);
+  const stillOk = (await call("GET", `/api/activities?checklist=${checklistId}`, { token: TOKEN_A })).json?.activities?.[0];
+  check("o status inválido não foi gravado", stillOk?.status === "SEM_STATUS", stillOk?.status);
+  for (const status of ["NAO_INICIADO", "EM_ANDAMENTO", "CONCLUIDO"]) {
+    const ok = await call("PATCH", "/api/activities", { token: TOKEN_A, body: { id: activityId, status } });
+    check(`status ${status} continua aceito`, ok.status === 200, `status ${ok.status}`);
+  }
+
+  check("limpeza do checklist da validação",
+    (await call("DELETE", "/api/checklists", { token: TOKEN_A, body: { id: checklistId } })).status === 200);
+}

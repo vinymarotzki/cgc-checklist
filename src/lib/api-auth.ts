@@ -26,3 +26,21 @@ export async function requireAuth(
 
   return { user, error: null };
 }
+
+/**
+ * Lê o corpo JSON da requisição. Devolve `null` quando o corpo está vazio, não
+ * é JSON ou não é um objeto — antes `req.json()` lançava e a rota respondia
+ * 500 com stack de erro; agora é um 400 limpo (ver `invalidBodyResponse`).
+ */
+export async function readJsonBody(req: { json(): Promise<unknown> }): Promise<Record<string, any> | null> {
+  try {
+    const body = await req.json();
+    return body && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, any>) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function invalidBodyResponse() {
+  return NextResponse.json({ error: "Corpo da requisição inválido (JSON esperado)." }, { status: 400 });
+}
