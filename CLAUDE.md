@@ -91,8 +91,10 @@ Both fetches carry a 15s timeout (`AbortSignal.timeout`, matching the
 `SASI_API_TIMEOUT_MS` default cgc-atividades uses for its own external calls) so a
 slow cgc-atividades degrades to a clean 502 instead of hanging the request. The local
 Docker `dev` profile overrides `CGC_APP_URL` to reach the cgc-atividades container via
-`host.docker.internal` — see the comment in `docker-compose.yml` and `.env.example`
-before assuming an edited `.env.local` isn't taking effect.
+`host.docker.internal` — see the comment in `docker-compose.yml` before assuming an
+edited `.env.local` isn't taking effect. There is no `.env.example`: the variables and
+their meaning are documented in the README ("Variáveis de ambiente"), so keep that
+table in sync when a `process.env.*` read is added or removed.
 
 ### Auth
 

@@ -63,8 +63,8 @@ o `cgc-atividades` precisa estar rodando (localmente, na porta `3001`).
 # 1. Instale as dependências
 npm install
 
-# 2. Crie o .env.local a partir do exemplo e preencha os valores
-cp .env.example .env.local
+# 2. Crie o .env.local na raiz com as variáveis da seção "Variáveis de
+#    ambiente" abaixo (não há arquivo de exemplo)
 
 # 3. (Opcional) Popule o banco com as atividades iniciais
 npm run db:seed
