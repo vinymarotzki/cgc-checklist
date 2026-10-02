@@ -11,3 +11,11 @@ dist/
 
 # Script de inspeção manual do banco, roda solto com tsx/node
 query_db.mjs
+
+# Link do projeto com a Vercel (vercel link) — é da máquina de cada pessoa.
+.vercel
+
+# Segredos locais. Estreito de propósito: um `.env*` aqui também ignoraria o
+# .env.example, que é versionado e serve de modelo.
+.env.local
+.env*.local
