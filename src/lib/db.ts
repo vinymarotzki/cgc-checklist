@@ -134,6 +134,20 @@ async function runMigrations() {
     )
   `);
 
+  // Sem índice, toda consulta por checklist_id/activity_id varria a tabela
+  // inteira, e o custo cresce com o histórico. IF NOT EXISTS mantém a
+  // migração idempotente; em batch para ser uma ida só ao Turso remoto.
+  await db.batch(
+    [
+      "CREATE INDEX IF NOT EXISTS idx_activities_checklist_id ON activities(checklist_id)",
+      "CREATE INDEX IF NOT EXISTS idx_history_activity_id ON history(activity_id)",
+      "CREATE INDEX IF NOT EXISTS idx_history_created_at ON history(created_at)",
+      "CREATE INDEX IF NOT EXISTS idx_observations_activity_id ON observations(activity_id)",
+      "CREATE INDEX IF NOT EXISTS idx_completed_checklists_completed_at ON completed_checklists(completed_at)",
+      "CREATE INDEX IF NOT EXISTS idx_completed_items_checklist_id ON completed_checklist_items(checklist_id)",
+    ],
+    "write"
+  );
 }
 
 /**
