@@ -15,7 +15,8 @@ query_db.mjs
 # Link do projeto com a Vercel (vercel link) — é da máquina de cada pessoa.
 .vercel
 
-# Segredos locais. Estreito de propósito: um `.env*` aqui também ignoraria o
-# .env.example, que é versionado e serve de modelo.
+# Segredos locais (inclusive os que `vercel env pull` grava). Estreito de
+# propósito: um `.env*` aqui também ignoraria qualquer arquivo de modelo
+# de variáveis que um dia volte a ser versionado.
 .env.local
 .env*.local
