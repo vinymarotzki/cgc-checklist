@@ -124,6 +124,34 @@ async function main() {
   await inputChecks();
 }
 
+// GET /api/observations?checklist= devolve só as observações daquele checklist.
+async function scopeChecks() {
+  console.log("\nObservações por checklist");
+  const ids = [];
+  for (const title of ["Escopo 1", "Escopo 2"]) {
+    const created = await call("POST", "/api/checklists", {
+      token: TOKEN_A,
+      body: { title, activities: [{ category: "Cat", activity: `Ativ ${title}` }] },
+    });
+    const checklistId = created.json?.checklist?.id;
+    const activityId = (await call("GET", `/api/activities?checklist=${checklistId}`, { token: TOKEN_A })).json?.activities?.[0]?.id;
+    await call("POST", "/api/observations", { token: TOKEN_A, body: { activity_id: activityId, text: `Nota ${title}` } });
+    ids.push({ checklistId, activityId });
+  }
+  check("criou 2 checklists com 1 observação cada", ids.every((i) => i.checklistId && i.activityId));
+
+  const first = (await call("GET", `/api/observations?checklist=${ids[0].checklistId}`, { token: TOKEN_A })).json?.observations || [];
+  check("com ?checklist= vem só a observação do checklist", first.length === 1 && first[0].activity_id === ids[0].activityId, `veio ${first.length}`);
+  const all = (await call("GET", "/api/observations", { token: TOKEN_A })).json?.observations || [];
+  check("sem ?checklist= segue devolvendo as de todos", all.some((o) => o.activity_id === ids[0].activityId) && all.some((o) => o.activity_id === ids[1].activityId));
+  const none = (await call("GET", "/api/observations?checklist=nao-existe", { token: TOKEN_A })).json?.observations || [];
+  check("checklist inexistente -> lista vazia", none.length === 0);
+
+  for (const { checklistId } of ids) {
+    await call("DELETE", "/api/checklists", { token: TOKEN_A, body: { id: checklistId } });
+  }
+}
+
 // Regras da PR de endurecimento: /controle com login, autoria, escopo por
 // checklist e remoção em cascata. Dois usuários, porque autoria só se testa
 // com alguém tentando mexer no que é de outro.
@@ -193,6 +221,8 @@ async function hardeningChecks() {
 
   check("A exclui o próprio checklist (limpeza)",
     (await call("DELETE", "/api/checklists", { token: TOKEN_A, body: { id: checklistId } })).status === 200);
+
+  await scopeChecks();
 }
 
 main()
